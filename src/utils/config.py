@@ -10,6 +10,8 @@ import copy
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from .paths import resolve_config_dir
+
 
 class Config:
     """Manages SecureUSB configuration."""
@@ -45,10 +47,10 @@ class Config:
         Initialize configuration manager.
 
         Args:
-            config_dir: Configuration directory path. If None, uses ~/.config/secureusb
+            config_dir: Configuration directory path. If None, uses the shared SecureUSB config dir.
         """
         if config_dir is None:
-            self.config_dir = Path.home() / ".config" / "secureusb"
+            self.config_dir = resolve_config_dir()
         else:
             self.config_dir = Path(config_dir)
 

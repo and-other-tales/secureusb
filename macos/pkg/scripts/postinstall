@@ -1,0 +1,29 @@
+#!/bin/bash
+# Post-install steps for SecureUSB macOS pkg.
+
+set -e
+
+PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
+INSTALL_ROOT="/opt/secureusb"
+CONFIG_DIR="/Library/Application Support/SecureUSB"
+POINTER_FILE="$CONFIG_DIR/config_dir"
+LAUNCHD_PLIST="/Library/LaunchDaemons/org.secureusb.agent.plist"
+
+echo "SecureUSB postinstall: installing Python deps..."
+"$PYTHON_BIN" -m pip install -r "$INSTALL_ROOT/macos/requirements.txt"
+"$PYTHON_BIN" -m pip install -r "$INSTALL_ROOT/requirements.txt" || true
+
+echo "SecureUSB postinstall: configuring shared directory..."
+mkdir -p "$CONFIG_DIR"
+chmod 700 "$CONFIG_DIR"
+echo "$CONFIG_DIR" > "$POINTER_FILE"
+
+echo "SecureUSB postinstall: loading launch daemon..."
+launchctl unload "$LAUNCHD_PLIST" 2>/dev/null || true
+launchctl load "$LAUNCHD_PLIST"
+
+cat <<'MSG'
+SecureUSB pkg installed.
+- Run "secureusb-setup" to configure TOTP.
+- Use "secureusb-macos" to start the daemon (or rely on launchd).
+MSG

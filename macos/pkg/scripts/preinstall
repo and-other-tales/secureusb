@@ -1,0 +1,10 @@
+#!/bin/bash
+# Ensure directories exist before files are laid down.
+
+set -e
+
+CONFIG_DIR="/Library/Application Support/SecureUSB"
+if [ ! -d "$CONFIG_DIR" ]; then
+    mkdir -p "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR"
+fi

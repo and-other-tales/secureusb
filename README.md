@@ -57,7 +57,9 @@ First-time configuration with QR code for Google Authenticator.
 - python3-gi (PyGObject)
 - python3-dbus
 - gir1.2-gtk-4.0 (GTK4)
-- gir1.2-adwaita-1
+- gir1.2-gtk-3.0 (AppIndicator menu)
+- gir1.2-adw-1
+- gir1.2-ayatanaappindicator3-0.1 (tray indicator)
 - udev
 - systemd
 - policykit-1
@@ -97,7 +99,7 @@ If you prefer to install manually:
 # Install system dependencies
 sudo apt update
 sudo apt install python3-pip python3-gi python3-dbus \
-                 gir1.2-gtk-4.0 gir1.2-adwaita-1 \
+                 gir1.2-gtk-4.0 gir1.2-adw-1 \
                  udev policykit-1
 
 # Install Python dependencies
@@ -151,11 +153,12 @@ python3 /opt/secureusb/src/gui/setup_wizard.py
 
 ### Configuration Files
 
-SecureUSB stores its configuration in:
-- `~/.config/secureusb/auth.enc` - Encrypted TOTP secret and recovery codes
-- `~/.config/secureusb/config.json` - Application settings
-- `~/.config/secureusb/whitelist.json` - Whitelisted devices
-- `~/.config/secureusb/events.db` - SQLite database of USB events
+SecureUSB stores its configuration in `/var/lib/secureusb/` (created during installation):
+- `/var/lib/secureusb/auth.enc` - Encrypted TOTP secret and recovery codes
+- `/var/lib/secureusb/config.json` - Application settings
+- `/var/lib/secureusb/whitelist.json` - Whitelisted devices
+- `/var/lib/secureusb/events.db` - SQLite database of USB events
+  - If you installed a previous version, the installer migrates data from `~/.config/secureusb` automatically.
 
 ## Usage
 
@@ -199,11 +202,14 @@ secureusb-setup
 
 # Start GUI client manually
 secureusb-client
+
+# Restart the tray indicator
+secureusb-indicator &
 ```
 
 ### Configuration
 
-Edit `~/.config/secureusb/config.json`:
+Edit `/var/lib/secureusb/config.json`:
 
 ```json
 {
@@ -317,6 +323,19 @@ Edit `~/.config/secureusb/config.json`:
    - `config.py` - Configuration management
    - `whitelist.py` - Device whitelist management
 
+### Platform Ports
+
+- **Linux**: Full daemon + GTK workflow (default `install.sh`).
+- **Windows 11** (`windows/`): PySide6 desktop agent that relies on `pnputil`
+  to disable/enable USB devices. See `windows/README.md` for setup details.
+- **macOS 12+** (`macos/`): PySide6 UI with IOKit integration and optional
+  launchd service. See `macos/README.md`.
+
+### Native Packages
+
+Packaging scripts for `.pkg`, `.msi`, and `.deb` installers live under
+`packaging/`. See `packaging/README.md` for build instructions.
+
 ## Troubleshooting
 
 ### Daemon Won't Start
@@ -343,8 +362,8 @@ ps aux | grep "client.py"
 # Start client manually
 secureusb-client
 
-# Check autostart file
-cat ~/.config/autostart/secureusb-client.desktop
+# Check autostart files
+ls ~/.config/autostart/secureusb-*.desktop
 ```
 
 ### Device Not Blocked
@@ -369,7 +388,7 @@ Use recovery codes:
 3. If you've lost recovery codes, you'll need to:
    ```bash
    # Remove configuration
-   rm -rf ~/.config/secureusb
+   rm -rf /var/lib/secureusb
 
    # Run setup wizard again
    secureusb-setup
@@ -417,9 +436,12 @@ secureusb/
 │   ├── systemd/         # systemd service
 │   ├── polkit/          # polkit policy
 │   ├── dbus/            # D-Bus configuration
-│   └── desktop/         # autostart file
+│   └── desktop/         # autostart entries
 ├── tests/               # Unit tests
 ├── docs/                # Documentation
+├── macos/               # macOS port + pkg builder
+├── windows/             # Windows port + MSI builder
+├── packaging/           # Cross-platform packaging scripts
 ├── install.sh           # Installation script
 ├── uninstall.sh         # Uninstallation script
 ├── requirements.txt     # Python dependencies

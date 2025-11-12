@@ -16,6 +16,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
+from src.utils.paths import resolve_config_dir
+
 
 class SecureStorage:
     """Manages encrypted storage of authentication credentials."""
@@ -25,10 +27,10 @@ class SecureStorage:
         Initialize secure storage.
 
         Args:
-            config_dir: Configuration directory path. If None, uses ~/.config/secureusb
+            config_dir: Configuration directory path. If None, uses the shared SecureUSB config dir.
         """
         if config_dir is None:
-            self.config_dir = Path.home() / ".config" / "secureusb"
+            self.config_dir = resolve_config_dir()
         else:
             self.config_dir = Path(config_dir)
 

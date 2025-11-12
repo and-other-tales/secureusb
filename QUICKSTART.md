@@ -103,6 +103,7 @@ secureusb-setup
 |---------|-------------|
 | `secureusb-setup` | Run setup wizard |
 | `secureusb-client` | Start GUI client |
+| `secureusb-indicator` | Start tray indicator |
 | `sudo systemctl status secureusb` | Check daemon status |
 | `sudo systemctl restart secureusb` | Restart daemon |
 | `sudo systemctl stop secureusb` | Stop daemon (allows all USB) |

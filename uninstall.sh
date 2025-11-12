@@ -54,6 +54,12 @@ fi
 print_header "SecureUSB Uninstallation"
 echo ""
 
+CONFIG_DIR="/var/lib/secureusb"
+POINTER_FILE="/etc/secureusb/config_dir"
+if [ -f "$POINTER_FILE" ]; then
+    CONFIG_DIR=$(cat "$POINTER_FILE")
+fi
+
 print_warning "This will remove SecureUSB from your system"
 print_warning "USB devices will be allowed automatically after uninstallation"
 echo ""
@@ -98,6 +104,7 @@ print_success "D-Bus configuration removed"
 # Remove autostart file
 print_info "Removing autostart file..."
 rm -f "$ACTUAL_HOME/.config/autostart/secureusb-client.desktop"
+rm -f "$ACTUAL_HOME/.config/autostart/secureusb-indicator.desktop"
 print_success "Autostart file removed"
 
 # Remove wrapper scripts
@@ -105,6 +112,7 @@ print_info "Removing wrapper scripts..."
 rm -f /usr/local/bin/secureusb-daemon
 rm -f /usr/local/bin/secureusb-setup
 rm -f /usr/local/bin/secureusb-client
+rm -f /usr/local/bin/secureusb-indicator
 print_success "Wrapper scripts removed"
 
 # Remove installation directory
@@ -115,15 +123,18 @@ print_success "Installation directory removed"
 # Ask about user configuration
 echo ""
 print_warning "User configuration files contain TOTP secrets and logs"
-read -p "Do you want to remove user configuration? (y/N) " -n 1 -r
+read -p "Do you want to remove SecureUSB configuration data? (y/N) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Removing user configuration..."
-    rm -rf "$ACTUAL_HOME/.config/secureusb"
-    print_success "User configuration removed"
+    rm -rf "$CONFIG_DIR"
+    print_success "Configuration removed"
 else
-    print_info "User configuration preserved at: $ACTUAL_HOME/.config/secureusb"
+    print_info "Configuration preserved at: $CONFIG_DIR"
 fi
+
+rm -f "$POINTER_FILE"
+rmdir /etc/secureusb 2>/dev/null || true
 
 # Re-enable USB devices
 print_info "Re-enabling USB authorization..."

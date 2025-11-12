@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import List, Dict, Optional
 
+from .paths import resolve_config_dir
+
 
 class DeviceWhitelist:
     """Manages whitelist of trusted USB devices."""
@@ -20,10 +22,10 @@ class DeviceWhitelist:
         Initialize whitelist manager.
 
         Args:
-            config_dir: Configuration directory. If None, uses ~/.config/secureusb
+            config_dir: Configuration directory. If None, uses the shared SecureUSB config dir.
         """
         if config_dir is None:
-            self.config_dir = Path.home() / ".config" / "secureusb"
+            self.config_dir = resolve_config_dir()
         else:
             self.config_dir = Path(config_dir)
 

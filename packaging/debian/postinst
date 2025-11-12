@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+CONFIG_DIR="/var/lib/secureusb"
+POINTER_DIR="/etc/secureusb"
+POINTER_FILE="$POINTER_DIR/config_dir"
+
+echo "Configuring SecureUSB..."
+python3 -m pip install --break-system-packages -r /opt/secureusb/requirements.txt
+
+mkdir -p "$CONFIG_DIR"
+chmod 700 "$CONFIG_DIR"
+mkdir -p "$POINTER_DIR"
+echo "$CONFIG_DIR" > "$POINTER_FILE"
+
+systemctl daemon-reload
+udevadm control --reload-rules
+
+systemctl enable secureusb.service || true
+systemctl restart secureusb.service || true
+
+echo "SecureUSB installed. Run 'secureusb-setup' to configure TOTP."

@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from enum import Enum
 
+from .paths import resolve_config_dir
+
 
 class EventAction(Enum):
     """Types of USB events to log."""
@@ -35,10 +37,10 @@ class USBLogger:
         Initialize USB event logger.
 
         Args:
-            db_path: Path to SQLite database. If None, uses ~/.config/secureusb/events.db
+            db_path: Path to SQLite database. If None, uses the shared SecureUSB config dir.
         """
         if db_path is None:
-            config_dir = Path.home() / ".config" / "secureusb"
+            config_dir = resolve_config_dir()
             config_dir.mkdir(parents=True, exist_ok=True)
             self.db_path = config_dir / "events.db"
         else:

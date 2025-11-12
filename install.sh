@@ -94,15 +94,24 @@ print_info "Updating package list..."
 apt-get update -qq
 
 # Install required packages
+# Determine correct polkit package (policykit-1 was removed in newer releases)
+POLKIT_PACKAGE="policykit-1"
+if apt-cache policy policykit-1 | grep -q "Candidate: (none)"; then
+    POLKIT_PACKAGE="polkitd"
+    print_warning "policykit-1 not available; falling back to polkitd"
+fi
+
 PACKAGES=(
     "python3-pip"
     "python3-gi"
     "python3-dbus"
     "gir1.2-gtk-4.0"
-    "gir1.2-adwaita-1"
+    "gir1.2-gtk-3.0"
+    "gir1.2-ayatanaappindicator3-0.1"
+    "gir1.2-adw-1"
     "libgirepository1.0-dev"
     "udev"
-    "policykit-1"
+    "$POLKIT_PACKAGE"
 )
 
 for package in "${PACKAGES[@]}"; do
@@ -175,12 +184,13 @@ cp data/dbus/org.secureusb.Daemon.conf /etc/dbus-1/system.d/
 print_success "D-Bus configuration installed"
 
 # Install desktop autostart file (for user)
-print_info "Installing autostart file..."
+print_info "Installing autostart files..."
 AUTOSTART_DIR="$ACTUAL_HOME/.config/autostart"
 mkdir -p "$AUTOSTART_DIR"
 cp data/desktop/secureusb-client.desktop "$AUTOSTART_DIR/"
+cp data/desktop/secureusb-indicator.desktop "$AUTOSTART_DIR/"
 chown -R "$ACTUAL_USER:$ACTUAL_USER" "$AUTOSTART_DIR"
-print_success "Autostart file installed"
+print_success "Autostart files installed"
 
 # Create wrapper scripts
 print_info "Creating wrapper scripts..."
@@ -209,13 +219,43 @@ exec python3 src/gui/client.py "$@"
 EOF
 chmod +x /usr/local/bin/secureusb-client
 
+# Indicator script
+cat > /usr/local/bin/secureusb-indicator << 'EOF'
+#!/bin/bash
+cd /opt/secureusb
+exec python3 src/gui/indicator.py "$@"
+EOF
+chmod +x /usr/local/bin/secureusb-indicator
+
 print_success "Wrapper scripts created"
+echo ""
+
+print_header "Step 4.5: Preparing Shared Configuration"
+
+CONFIG_DIR="/var/lib/secureusb"
+LEGACY_CONFIG_DIR="$ACTUAL_HOME/.config/secureusb"
+
+print_info "Ensuring shared config directory exists at $CONFIG_DIR"
+mkdir -p "$CONFIG_DIR"
+
+# Migrate existing per-user config if present and shared dir is empty
+if [ -d "$LEGACY_CONFIG_DIR" ] && [ -z "$(ls -A "$CONFIG_DIR" 2>/dev/null)" ]; then
+    print_info "Migrating existing configuration from $LEGACY_CONFIG_DIR"
+    cp -a "$LEGACY_CONFIG_DIR/." "$CONFIG_DIR/"
+fi
+
+chown -R "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR"
+chmod 700 "$CONFIG_DIR"
+
+mkdir -p /etc/secureusb
+echo "$CONFIG_DIR" > /etc/secureusb/config_dir
+print_success "Shared configuration directory ready"
 echo ""
 
 print_header "Step 5: Configuring SecureUSB"
 
 # Check if already configured
-if [ -f "$ACTUAL_HOME/.config/secureusb/auth.enc" ]; then
+if [ -f "$CONFIG_DIR/auth.enc" ]; then
     print_warning "SecureUSB is already configured"
     print_info "Skipping setup wizard"
 else
