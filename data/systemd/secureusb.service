@@ -1,0 +1,40 @@
+[Unit]
+Description=SecureUSB Daemon - USB Device Authorization Service
+Documentation=https://github.com/secureusb/secureusb
+After=systemd-udev.service dbus.service
+Wants=systemd-udev.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/secureusb/src/daemon/service.py
+Restart=on-failure
+RestartSec=5
+
+# Run as root (required for USB authorization)
+User=root
+Group=root
+
+# Security hardening
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/sys/bus/usb
+NoNewPrivileges=yes
+ProtectKernelTunables=no
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=secureusb
+
+[Install]
+WantedBy=multi-user.target
