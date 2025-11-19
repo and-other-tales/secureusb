@@ -58,7 +58,7 @@ Features:
 - Registers wrappers (`secureusb-windows.ps1`) in `%ProgramFiles%\SecureUSB`
 - Runs `pip install -r windows/requirements.txt` on install
 
-## Debian/Ubuntu (`packaging/debian/build_deb.sh`)
+## Debian-based distros (`packaging/debian/build_deb.sh`)
 
 Requirements:
 

@@ -8,7 +8,7 @@ First-run wizard for configuring TOTP authentication with Google Authenticator.
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, GdkPixbuf, Pango
+from gi.repository import Gtk, Adw, GdkPixbuf, Pango, GLib
 
 import sys
 import qrcode
@@ -31,11 +31,12 @@ class SetupWizard(Adw.Window):
         self.authenticator = None
         self.recovery_codes = []
         self.storage = SecureStorage()
+        self._should_show_ui = True
 
         # Check if already configured
         if self.storage.is_configured():
             print("SecureUSB is already configured!")
-            self.close()
+            self._should_show_ui = False
             return
 
         # Configure window
@@ -524,6 +525,10 @@ def run_setup_wizard():
 
     def on_activate(app):
         wizard = SetupWizard()
+        if not getattr(wizard, "_should_show_ui", True):
+            print("Close the wizard window or run `secureusb-setup --reset` to reconfigure.")
+            app.quit()
+            return
         wizard.set_application(app)
         wizard.present()
 

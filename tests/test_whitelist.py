@@ -315,6 +315,48 @@ class TestDeviceWhitelist(unittest.TestCase):
         finally:
             shutil.rmtree(other_dir)
 
+    def test_import_whitelist_merge_updates_existing_metadata(self):
+        """Merge mode should refresh metadata without clobbering usage stats."""
+        self.whitelist.add_device(
+            serial_number="ABC123",
+            vendor_id="046d",
+            product_id="c52b",
+            vendor_name="Old Name",
+            product_name="Old Product",
+            notes="Legacy note"
+        )
+
+        # Simulate prior usage so there is history to preserve.
+        self.whitelist.update_usage("ABC123")
+        original = dict(self.whitelist.get_device("ABC123"))
+
+        update_payload = {
+            "ABC123": {
+                "vendor_id": "9999",
+                "product_id": "1111",
+                "vendor_name": "New Name",
+                "product_name": "New Product",
+                "notes": "Updated note"
+            }
+        }
+
+        update_file = self.test_dir / "update.json"
+        update_file.write_text(json.dumps(update_payload))
+
+        self.assertTrue(self.whitelist.import_whitelist(update_file, merge=True))
+
+        refreshed = self.whitelist.get_device("ABC123")
+        self.assertEqual(refreshed["vendor_name"], "New Name")
+        self.assertEqual(refreshed["product_name"], "New Product")
+        self.assertEqual(refreshed["notes"], "Updated note")
+        self.assertEqual(refreshed["vendor_id"], "9999")
+        self.assertEqual(refreshed["product_id"], "1111")
+
+        # Usage data should remain untouched.
+        self.assertEqual(refreshed["use_count"], original["use_count"])
+        self.assertEqual(refreshed["last_used_timestamp"], original["last_used_timestamp"])
+        self.assertEqual(refreshed["added_timestamp"], original["added_timestamp"])
+
     def test_import_whitelist_normalizes_partial_entries(self):
         """Imported devices missing metadata should be normalized safely."""
         raw_data = {

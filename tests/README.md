@@ -273,7 +273,7 @@ These require more complex setup and are candidates for future test expansion.
 ### Platform Dependencies
 
 Tests are designed for:
-- Linux (Ubuntu 25.04)
+- Linux (modern GNOME/systemd distributions)
 - Python 3.13+
 - System packages: python3-gi, python3-dbus
 

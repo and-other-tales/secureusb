@@ -69,6 +69,23 @@ def _read_pointer_file() -> Optional[Path]:
     return None
 
 
+def _is_writable_path(path: Path) -> bool:
+    """Return True if the current user can create/read files under path."""
+    try:
+        candidate = path
+        if not candidate.exists():
+            # Walk up until we find an existing parent to test permissions on.
+            candidate = candidate.parent
+            while candidate and not candidate.exists():
+                next_parent = candidate.parent
+                if next_parent == candidate:
+                    break
+                candidate = next_parent
+        return os.access(candidate, os.W_OK | os.X_OK)
+    except Exception:
+        return False
+
+
 def resolve_config_dir(explicit_dir: Optional[Path] = None) -> Path:
     """
     Determine which directory SecureUSB should use for config/logging.
@@ -94,10 +111,10 @@ def resolve_config_dir(explicit_dir: Optional[Path] = None) -> Path:
         return Path(env_path).expanduser()
 
     pointer_path = _read_pointer_file()
-    if pointer_path:
+    if pointer_path and _is_writable_path(pointer_path):
         return pointer_path
 
-    if SYSTEM_CONFIG_DIR.exists():
+    if SYSTEM_CONFIG_DIR.exists() and _is_writable_path(SYSTEM_CONFIG_DIR):
         return SYSTEM_CONFIG_DIR
 
     return Path.home() / ".config" / "secureusb"

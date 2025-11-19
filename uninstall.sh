@@ -56,6 +56,7 @@ echo ""
 
 CONFIG_DIR="/var/lib/secureusb"
 POINTER_FILE="/etc/secureusb/config_dir"
+LEGACY_CONFIG_DIR="$ACTUAL_HOME/.config/secureusb"
 if [ -f "$POINTER_FILE" ]; then
     CONFIG_DIR=$(cat "$POINTER_FILE")
 fi
@@ -128,6 +129,10 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Removing user configuration..."
     rm -rf "$CONFIG_DIR"
+    if [ -d "$LEGACY_CONFIG_DIR" ] && [ "$LEGACY_CONFIG_DIR" != "$CONFIG_DIR" ]; then
+        rm -rf "$LEGACY_CONFIG_DIR"
+        print_info "Legacy per-user configuration removed from $LEGACY_CONFIG_DIR"
+    fi
     print_success "Configuration removed"
 else
     print_info "Configuration preserved at: $CONFIG_DIR"

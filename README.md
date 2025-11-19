@@ -1,6 +1,6 @@
 # SecureUSB
 
-🔒 **Secure USB Device Authorization System for Ubuntu 25.04**
+🔒 **Secure USB Device Authorization System for GNOME-based Linux desktops**
 
 SecureUSB protects your computer from unauthorized USB devices by requiring TOTP (Time-based One-Time Password) authentication before any USB device can connect. Perfect for high-security environments, prevents BadUSB attacks, and provides complete audit logging of all USB connections.
 
@@ -48,7 +48,7 @@ First-time configuration with QR code for Google Authenticator.
 
 ## Requirements
 
-- **OS**: Ubuntu 25.04 (may work on other Debian-based distros)
+- **OS**: Modern Linux distribution with systemd (tested on GNOME-based Debian derivatives)
 - **Desktop**: GNOME
 - **Python**: 3.13+
 - **Privileges**: Root access for installation
@@ -478,7 +478,7 @@ Contributions are welcome! Please:
 ## FAQ
 
 **Q: Does this work on other Linux distributions?**
-A: It should work on any modern Debian/Ubuntu-based distro with systemd and GNOME. Other distros may require adjustments.
+A: It should work on most modern systemd-based GNOME distributions (Debian, Fedora, Arch, etc.). Other environments may require tweaks to the service files.
 
 **Q: Can I use a different TOTP app?**
 A: Yes! Any TOTP app (Authy, Microsoft Authenticator, etc.) that supports RFC 6238 will work.
@@ -504,7 +504,7 @@ The community edition is provided under the MIT License (see `LICENSE`). Commerc
 
 ## Author
 
-Created for Ubuntu 25.04 GNOME desktop environments.
+Created for GNOME desktop environments on modern Linux distributions.
 
 ## Support
 

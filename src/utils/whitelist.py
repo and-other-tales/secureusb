@@ -316,10 +316,21 @@ class DeviceWhitelist:
             if not merge:
                 self.devices = normalized_devices
             else:
-                # Merge, keeping existing devices and adding new normalized ones
+                # Merge, updating existing metadata while preserving usage stats
                 for serial, device_info in normalized_devices.items():
-                    if serial not in self.devices:
+                    existing = self.devices.get(serial)
+                    if not existing:
                         self.devices[serial] = device_info
+                        continue
+
+                    merged = existing.copy()
+                    merged.update(device_info)
+
+                    for key in ('use_count', 'last_used_timestamp', 'added_timestamp'):
+                        merged[key] = existing.get(key)
+
+                    merged['serial_number'] = serial
+                    self.devices[serial] = merged
 
             return self._save_whitelist()
 
