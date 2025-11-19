@@ -534,6 +534,27 @@ on boot.
 
 def run_setup_wizard():
     """Run the setup wizard."""
+    import argparse
+
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="SecureUSB Setup Wizard")
+    parser.add_argument('--reset', action='store_true',
+                       help='Reset existing configuration and reconfigure')
+    args = parser.parse_args()
+
+    # Handle reset flag
+    if args.reset:
+        storage = SecureStorage()
+        if storage.is_configured():
+            print("Resetting SecureUSB configuration...")
+            if storage.reset_auth():
+                print("✓ Configuration reset successfully")
+            else:
+                print("✗ Error resetting configuration")
+                sys.exit(1)
+        else:
+            print("No existing configuration to reset")
+
     app = Adw.Application(application_id="org.secureusb.SetupWizard")
 
     def on_activate(app):
