@@ -12,6 +12,11 @@ from typing import Dict, Any, Optional
 
 from .paths import resolve_config_dir
 
+# Constants
+MIN_TIMEOUT_SECONDS = 10
+MAX_TIMEOUT_SECONDS = 300
+DEFAULT_TIMEOUT_SECONDS = 30
+
 
 class Config:
     """Manages SecureUSB configuration."""
@@ -194,7 +199,7 @@ class Config:
 
     def get_timeout(self) -> int:
         """Get authorization timeout in seconds."""
-        return self.get('general.timeout_seconds', 30)
+        return self.get('general.timeout_seconds', DEFAULT_TIMEOUT_SECONDS)
 
     def set_timeout(self, seconds: int) -> bool:
         """
@@ -205,8 +210,14 @@ class Config:
 
         Returns:
             True if successful, False otherwise
+
+        Raises:
+            TypeError: If seconds is not an integer
         """
-        seconds = max(10, min(300, seconds))
+        if not isinstance(seconds, int):
+            raise TypeError(f"seconds must be an integer, got {type(seconds).__name__}")
+
+        seconds = max(MIN_TIMEOUT_SECONDS, min(MAX_TIMEOUT_SECONDS, seconds))
         return self.set('general.timeout_seconds', seconds)
 
     def export_config(self, export_path: Path) -> bool:
