@@ -1,6 +1,6 @@
 # SecureUSB
 
-🔒 **Secure USB Device Authorization System for GNOME-based Linux desktops**
+🔒 **TOTP Based USB Device Auth and Management**
 
 SecureUSB protects your computer from unauthorized USB devices by requiring TOTP (Time-based One-Time Password) authentication before any USB device can connect. Perfect for high-security environments, prevents BadUSB attacks, and provides complete audit logging of all USB connections.
 
