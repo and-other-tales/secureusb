@@ -324,6 +324,27 @@ echo "  secureusb-client - Start GUI client"
 echo "  sudo systemctl status secureusb - Check daemon status"
 echo "  sudo systemctl restart secureusb - Restart daemon"
 echo ""
+
+# Check if GNOME Shell is running and extension is not installed
+if pgrep -x "gnome-shell" > /dev/null 2>&1; then
+    if ! gnome-extensions list --enabled 2>/dev/null | grep -qi appindicator; then
+        print_warning "GNOME AppIndicator Extension Not Detected!"
+        echo ""
+        echo "Modern GNOME requires the AppIndicator extension to show the tray icon."
+        echo ""
+        echo "Install it with one of these methods:"
+        echo "  Method 1 (Recommended):"
+        echo "    sudo apt install gnome-shell-extension-appindicator"
+        echo "    gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com"
+        echo ""
+        echo "  Method 2 (Manual):"
+        echo "    Visit: https://extensions.gnome.org/extension/615/appindicator-support/"
+        echo ""
+        echo "Then restart GNOME Shell (Alt+F2, type 'r', press Enter)"
+        echo ""
+    fi
+fi
+
 print_info "When you plug in a USB device, you'll see an authorization dialog"
 print_info "Enter your TOTP code to allow the device to connect"
 echo ""

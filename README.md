@@ -64,6 +64,18 @@ First-time configuration with QR code for Google Authenticator.
 - systemd
 - policykit-1
 
+**GNOME Users (3.26+)**: Modern GNOME removed native AppIndicator support. You must install the **AppIndicator extension**:
+```bash
+# Install via GNOME Extensions website:
+# https://extensions.gnome.org/extension/615/appindicator-support/
+
+# Or via package manager (Ubuntu/Debian):
+sudo apt install gnome-shell-extension-appindicator
+
+# Then enable it:
+gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com
+```
+
 ### Python Dependencies
 - pyudev - USB device monitoring
 - pyotp - TOTP authentication
@@ -351,6 +363,37 @@ sudo journalctl -u secureusb -n 50
 # - TOTP not configured: Run secureusb-setup
 # - Permission error: Check /opt/secureusb ownership
 # - Python dependencies: Reinstall with pip3
+```
+
+### Tray Icon Not Showing in GNOME Top Bar
+
+**Cause**: Modern GNOME (3.26+) removed native AppIndicator support.
+
+**Solution**: Install the AppIndicator GNOME Shell extension:
+
+```bash
+# Method 1: Via package manager (Ubuntu/Debian)
+sudo apt install gnome-shell-extension-appindicator
+
+# Method 2: Via GNOME Extensions website
+# Visit: https://extensions.gnome.org/extension/615/appindicator-support/
+# Click "Install" and follow browser prompts
+
+# Enable the extension:
+gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com
+
+# Restart GNOME Shell:
+# Press Alt+F2, type 'r', press Enter
+# (Or log out and log back in)
+```
+
+**Verify indicator is running**:
+```bash
+ps aux | grep indicator.py
+# Should show: /usr/bin/python3 /opt/secureusb/src/gui/indicator.py
+
+# Check if extension is enabled:
+gnome-extensions list --enabled | grep appindicator
 ```
 
 ### Authorization Dialog Not Appearing

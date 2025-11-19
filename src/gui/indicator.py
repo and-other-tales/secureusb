@@ -16,7 +16,7 @@ from typing import Optional
 import gi
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gio
 
 INDICATOR_MODULE = None
 
@@ -92,6 +92,7 @@ class SecureUSBIndicator:
         self.indicator.set_menu(self.menu)
 
         GLib.idle_add(self._connect_dbus)
+        GLib.timeout_add_seconds(2, self._show_startup_notification)
 
     def _connect_dbus(self):
         self.dbus_client = DBusClient('system')
@@ -142,6 +143,54 @@ class SecureUSBIndicator:
             subprocess.Popen(command.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as exc:
             print(f"Failed to launch {command}: {exc}")
+
+    def _show_startup_notification(self):
+        """Show a notification on startup to help users find the indicator."""
+        try:
+            # Check if GNOME Shell is running
+            result = subprocess.run(
+                ['pgrep', '-x', 'gnome-shell'],
+                capture_output=True,
+                timeout=1
+            )
+
+            if result.returncode == 0:
+                # GNOME is running, check for AppIndicator extension
+                result = subprocess.run(
+                    ['gnome-extensions', 'list', '--enabled'],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+
+                if result.returncode == 0 and 'appindicator' not in result.stdout.lower():
+                    # AppIndicator extension not enabled
+                    notification = Gio.Notification.new("SecureUSB Indicator Started")
+                    notification.set_body(
+                        "The indicator is running, but may not be visible in the top bar.\n"
+                        "Modern GNOME requires the AppIndicator extension.\n\n"
+                        "Install it with:\n"
+                        "sudo apt install gnome-shell-extension-appindicator"
+                    )
+                    notification.set_icon(Gio.ThemedIcon.new("secureusb"))
+
+                    app = Gio.Application.get_default()
+                    if app:
+                        app.send_notification("secureusb-indicator", notification)
+                    else:
+                        # Fallback: use notify-send if available
+                        subprocess.run([
+                            'notify-send',
+                            '--app-name=SecureUSB',
+                            '--icon=secureusb',
+                            'SecureUSB Indicator Started',
+                            'The indicator is running but may not be visible. '
+                            'Install gnome-shell-extension-appindicator to see it in the top bar.'
+                        ], timeout=2)
+        except Exception:
+            pass  # Silently fail - notification is optional
+
+        return False  # Don't repeat the notification
 
 
 def main():
