@@ -60,6 +60,17 @@ class TestSetupWizard(unittest.TestCase):
         self.assertFalse(callback())
         clipboard.set.assert_called_once_with("")
 
+    def test_save_and_complete_saves_then_advances(self):
+        """Test that _save_and_complete saves configuration and advances to next page."""
+        wizard = self._wizard_stub()
+        wizard._save_configuration = MagicMock()
+        wizard._next_page = MagicMock()
+
+        wizard._save_and_complete()
+
+        wizard._save_configuration.assert_called_once()
+        wizard._next_page.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
