@@ -281,10 +281,15 @@ class DeviceWhitelist:
         results = []
 
         for device in self.devices.values():
-            if (query_lower in device['serial_number'].lower() or
-                query_lower in device['vendor_name'].lower() or
-                query_lower in device['product_name'].lower() or
-                query_lower in device.get('notes', '').lower()):
+            serial = (device.get('serial_number') or '').lower()
+            vendor = (device.get('vendor_name') or '').lower()
+            product = (device.get('product_name') or '').lower()
+            notes = (device.get('notes') or '').lower()
+
+            if (query_lower in serial or
+                query_lower in vendor or
+                query_lower in product or
+                query_lower in notes):
                 results.append(device)
 
         return results

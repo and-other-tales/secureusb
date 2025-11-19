@@ -36,6 +36,7 @@ class AuthorizationDialog(Adw.Window):
         self.dbus_client = dbus_client
         self.timeout_seconds = 30
         self.timeout_id = None
+        self.toast_overlay = None
 
         # Configure window
         self.set_title("USB Device Authorization Required")
@@ -178,8 +179,12 @@ class AuthorizationDialog(Adw.Window):
 
         main_box.append(button_box)
 
+        # Wrap content in toast overlay for in-window notifications
+        self.toast_overlay = Adw.ToastOverlay()
+        self.toast_overlay.set_child(main_box)
+
         # Set window content
-        self.set_content(main_box)
+        self.set_content(self.toast_overlay)
 
         # Focus TOTP entry
         self.totp_entry.grab_focus()
@@ -266,8 +271,18 @@ class AuthorizationDialog(Adw.Window):
         if result == 'success':
             # Add to whitelist if requested
             if self.whitelist_check.get_active() and self.device_info.get('serial_number'):
-                # TODO: Add to whitelist via D-Bus
-                pass
+                whitelist_payload = {
+                    'serial_number': self.device_info.get('serial_number', ''),
+                    'vendor_id': self.device_info.get('vendor_id', ''),
+                    'product_id': self.device_info.get('product_id', ''),
+                    'vendor_name': self.device_info.get('vendor_name', ''),
+                    'product_name': self.device_info.get('product_name', ''),
+                    'notes': 'Added from authorization dialog'
+                }
+
+                add_fn = getattr(self.dbus_client, 'add_to_whitelist', None)
+                if add_fn and not add_fn(whitelist_payload):
+                    self._show_error("Failed to remember this device. It was still authorized.")
 
             self.close()
 
@@ -301,7 +316,12 @@ class AuthorizationDialog(Adw.Window):
 
     def _auto_deny(self):
         """Auto-deny device on timeout."""
-        GLib.timeout_add(1000, lambda: (self._deny_device(), False))
+        def _deny_and_stop():
+            """Invoke deny handler once and stop the GLib timer."""
+            self._deny_device()
+            return False
+
+        GLib.timeout_add(1000, _deny_and_stop)
 
     def _show_error(self, message: str):
         """
@@ -310,13 +330,13 @@ class AuthorizationDialog(Adw.Window):
         Args:
             message: Error message
         """
-        # Create error label
-        error_label = Gtk.Label(label=message)
-        error_label.add_css_class("error")
-        error_label.set_wrap(True)
-
-        # TODO: Show as toast notification in Adwaita
-        print(f"Error: {message}")
+        if self.toast_overlay:
+            toast = Adw.Toast.new(message)
+            toast.set_priority(Adw.ToastPriority.HIGH)
+            toast.set_timeout(4)
+            self.toast_overlay.add_toast(toast)
+        else:
+            print(f"Error: {message}")
 
 
 def show_authorization_dialog(device_info: dict):

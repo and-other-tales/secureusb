@@ -226,19 +226,24 @@ class SecureUSBService(dbus.service.Object):
             print(f"[D-Bus] Error getting statistics: {e}")
             return dbus.Dictionary({}, signature='ss')
 
-    @dbus.service.method(DBUS_INTERFACE_NAME, in_signature='s', out_signature='b')
-    def AddToWhitelist(self, serial_number):
+    @dbus.service.method(DBUS_INTERFACE_NAME, in_signature='a{ss}', out_signature='b')
+    def AddToWhitelist(self, device_info):
         """
         Add device to whitelist.
 
         Args:
-            serial_number: Device serial number
+            device_info: Dictionary with device metadata
 
         Returns:
             True if successful, False otherwise
         """
-        if self.config_callback:
-            return self.config_callback('add_whitelist', str(serial_number))
+        if self.config_callback and isinstance(device_info, dict):
+            normalized = {
+                str(key): str(value)
+                for key, value in device_info.items()
+                if value is not None
+            }
+            return self.config_callback('add_whitelist', normalized)
         return False
 
     @dbus.service.method(DBUS_INTERFACE_NAME, in_signature='s', out_signature='b')
@@ -414,6 +419,22 @@ class DBusClient:
         try:
             return bool(self.interface.DenyDevice(device_id))
         except:
+            return False
+
+    def add_to_whitelist(self, device_info: Dict[str, str]) -> bool:
+        """Add a device to the whitelist via D-Bus."""
+        if not self.interface or not device_info:
+            return False
+
+        try:
+            payload = {
+                str(key): str(value)
+                for key, value in device_info.items()
+                if value is not None
+            }
+            return bool(self.interface.AddToWhitelist(dbus.Dictionary(payload, signature='ss')))
+        except Exception as e:
+            print(f"[D-Bus Client] Error adding to whitelist: {e}")
             return False
 
     def connect_to_signal(self, signal_name: str, handler: Callable):

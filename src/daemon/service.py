@@ -427,8 +427,32 @@ class SecureUSBDaemon:
             return result
 
         elif action == 'add_whitelist':
-            # This would need device info - simplified for now
-            return True
+            if not isinstance(value, dict):
+                return False
+
+            serial_number = str(value.get('serial_number', '')).strip()
+            if not serial_number:
+                return False
+
+            vendor_id = str(value.get('vendor_id', '') or '0000')
+            product_id = str(value.get('product_id', '') or '0000')
+            vendor_name = value.get('vendor_name')
+            product_name = value.get('product_name')
+            notes = value.get('notes')
+
+            added = self.whitelist.add_device(
+                serial_number=serial_number,
+                vendor_id=vendor_id,
+                product_id=product_id,
+                vendor_name=vendor_name,
+                product_name=product_name,
+                notes=notes
+            )
+
+            if added:
+                print(f"[Daemon] Added device {serial_number} to whitelist")
+
+            return added
 
         elif action == 'remove_whitelist':
             return self.whitelist.remove_device(str(value))

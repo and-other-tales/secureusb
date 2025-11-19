@@ -237,6 +237,22 @@ class TestDeviceWhitelist(unittest.TestCase):
         results = self.whitelist.search_devices("NOMATCH")
         self.assertEqual(len(results), 0)
 
+    def test_search_devices_handles_missing_fields(self):
+        """Search should not raise when optional fields are missing."""
+        # Simulate a manually edited whitelist entry lacking metadata
+        self.whitelist.devices = {
+            "ABC123": {
+                "serial_number": "ABC123",
+                # vendor_name/product_name intentionally omitted
+                "notes": None
+            }
+        }
+
+        # Should return the device when searching by serial despite missing fields
+        results = self.whitelist.search_devices("abc")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['serial_number'], "ABC123")
+
     def test_export_whitelist(self):
         """Test exporting whitelist."""
         self.whitelist.add_device(

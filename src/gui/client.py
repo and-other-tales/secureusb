@@ -9,12 +9,13 @@ and displays authorization dialogs.
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, GLib
+from gi.repository import Gtk, Adw, GLib, Gio
 
 import sys
 import dbus
 import dbus.mainloop.glib
 from pathlib import Path
+import time
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -171,10 +172,19 @@ class SecureUSBClient(Adw.Application):
             message: Notification message
             success: True for success, False for error
         """
-        # For now, just print
-        # TODO: Implement proper notifications
-        status = "✓" if success else "✗"
-        print(f"{status} {message}")
+        icon_name = "security-high" if success else "security-low"
+        summary = "SecureUSB"
+
+        try:
+            notification = Gio.Notification.new(summary)
+            notification.set_body(message)
+            notification.set_icon(Gio.ThemedIcon.new(icon_name))
+
+            notification_id = f"secureusb-{int(time.time() * 1000)}"
+            self.send_notification(notification_id, notification)
+        except Exception as e:
+            status = "✓" if success else "✗"
+            print(f"{status} {message} (notification error: {e})")
 
 
 def main():

@@ -269,10 +269,16 @@ class TestSecureUSBServiceMethods(unittest.TestCase):
         """Test AddToWhitelist method."""
         self.config_callback.return_value = True
 
-        result = self.service.AddToWhitelist("ABC123456")
+        payload = {
+            'serial_number': 'ABC123456',
+            'vendor_id': '046d',
+            'product_id': 'c52b'
+        }
+
+        result = self.service.AddToWhitelist(payload)
 
         self.assertTrue(result)
-        self.config_callback.assert_called_once_with('add_whitelist', "ABC123456")
+        self.config_callback.assert_called_once_with('add_whitelist', payload)
 
     def test_remove_from_whitelist(self):
         """Test RemoveFromWhitelist method."""
@@ -460,6 +466,24 @@ class TestDBusClient(unittest.TestCase):
 
             self.assertTrue(result)
             self.mock_interface.DenyDevice.assert_called_once_with("1-4")
+
+    @patch('src.daemon.dbus_service.dbus.SystemBus')
+    def test_client_add_to_whitelist(self, mock_system_bus):
+        """Test add_to_whitelist helper."""
+        mock_system_bus.return_value = self.mock_bus
+        self.mock_bus.get_object.return_value = self.mock_proxy
+
+        with patch('src.daemon.dbus_service.dbus.Interface') as mock_interface_class:
+            self.mock_interface.AddToWhitelist.return_value = True
+            mock_interface_class.return_value = self.mock_interface
+
+            client = DBusClient('system')
+            payload = {'serial_number': 'ABC123'}
+
+            result = client.add_to_whitelist(payload)
+
+            self.assertTrue(result)
+            self.mock_interface.AddToWhitelist.assert_called_once()
 
     @patch('src.daemon.dbus_service.dbus.SystemBus')
     def test_connect_to_signal(self, mock_system_bus):
