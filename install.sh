@@ -183,6 +183,16 @@ mkdir -p /etc/dbus-1/system.d
 cp data/dbus/org.secureusb.Daemon.conf /etc/dbus-1/system.d/
 print_success "D-Bus configuration installed"
 
+# Install application icons
+print_info "Installing application icons..."
+mkdir -p /usr/share/icons/hicolor/scalable/apps
+cp data/icons/hicolor/scalable/apps/*.svg /usr/share/icons/hicolor/scalable/apps/
+# Update icon cache if gtk-update-icon-cache is available
+if command -v gtk-update-icon-cache &> /dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+print_success "Application icons installed"
+
 # Install desktop autostart file (for user)
 print_info "Installing autostart files..."
 AUTOSTART_DIR="$ACTUAL_HOME/.config/autostart"

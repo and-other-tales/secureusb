@@ -61,19 +61,16 @@ Categories=System;Security;
 Terminal=false
 EOF
 
-echo "--> Creating placeholder icon"
-ICON_PATH="$APPDIR/usr/share/icons/hicolor/256x256/apps/secureusb.png"
-python3 - "$ICON_PATH" <<'PY'
-import base64
-import pathlib
-import sys
-icon_path = pathlib.Path(sys.argv[1])
-icon_path.parent.mkdir(parents=True, exist_ok=True)
-icon_path.write_bytes(base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAABmxkRkAAAACXBIWXMAAAsTAAALEwEAmpwY"
-    "AAAAG0lEQVR4nO3BMQEAAADCoPdPbQ43oAAAAAAAAAAA8GsAARg7Gz4AAAAASUVORK5CYII="
-))
-PY
+echo "--> Installing application icons"
+mkdir -p "$APPDIR/usr/share/icons/hicolor/scalable/apps"
+cp "$REPO_ROOT/data/icons/hicolor/scalable/apps/"*.svg "$APPDIR/usr/share/icons/hicolor/scalable/apps/"
+
+# Copy main icon for AppImage
+cp "$REPO_ROOT/data/icons/hicolor/scalable/apps/secureusb.svg" "$APPDIR/secureusb.svg"
+
+# Create a symlink for the desktop file to find the icon
+mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+ln -sf ../../scalable/apps/secureusb.svg "$APPDIR/usr/share/icons/hicolor/256x256/apps/secureusb.svg"
 
 APPIMAGETOOL_BIN="${APPIMAGETOOL:-$(command -v appimagetool || true)}"
 if [[ -z "$APPIMAGETOOL_BIN" ]]; then

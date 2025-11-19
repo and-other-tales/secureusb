@@ -6,7 +6,7 @@
 
   <vendor>SecureUSB</vendor>
   <vendor_url>https://github.com/secureusb/secureusb</vendor_url>
-  <icon_name>security-high</icon_name>
+  <icon_name>secureusb</icon_name>
 
   <action id="org.secureusb.authorize-device">
     <description>Authorize USB device</description>

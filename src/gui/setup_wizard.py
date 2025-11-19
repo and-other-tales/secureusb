@@ -75,7 +75,7 @@ class SetupWizard(Adw.Window):
         box.set_valign(Gtk.Align.CENTER)
 
         # Icon
-        icon = Gtk.Image.new_from_icon_name("security-high-symbolic")
+        icon = Gtk.Image.new_from_icon_name("secureusb-symbolic")
         icon.set_pixel_size(96)
         box.append(icon)
 

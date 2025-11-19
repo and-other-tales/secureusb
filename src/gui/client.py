@@ -172,7 +172,7 @@ class SecureUSBClient(Adw.Application):
             message: Notification message
             success: True for success, False for error
         """
-        icon_name = "security-high" if success else "security-low"
+        icon_name = "secureusb" if success else "secureusb-disabled"
         summary = "SecureUSB"
 
         try:

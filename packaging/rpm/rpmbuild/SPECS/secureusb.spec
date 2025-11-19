@@ -36,6 +36,9 @@ install -m 0644 data/polkit/org.secureusb.policy %{buildroot}/usr/share/polkit-1
 install -d %{buildroot}/etc/dbus-1/system.d
 install -m 0644 data/dbus/org.secureusb.Daemon.conf %{buildroot}/etc/dbus-1/system.d/org.secureusb.Daemon.conf
 
+install -d %{buildroot}/usr/share/icons/hicolor/scalable/apps
+install -m 0644 data/icons/hicolor/scalable/apps/*.svg %{buildroot}/usr/share/icons/hicolor/scalable/apps/
+
 install -d %{buildroot}/etc/xdg/autostart
 install -m 0644 data/desktop/secureusb-client.desktop %{buildroot}/etc/xdg/autostart/secureusb-client.desktop
 install -m 0644 data/desktop/secureusb-indicator.desktop %{buildroot}/etc/xdg/autostart/secureusb-indicator.desktop
@@ -74,6 +77,10 @@ chmod 0755 %{buildroot}/usr/local/bin/secureusb-indicator
 if [ $1 -eq 1 ]; then
     /bin/systemctl enable --now secureusb.service >/dev/null 2>&1 || :
 fi
+# Update icon cache
+if command -v gtk-update-icon-cache &> /dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || :
+fi
 
 %preun
 if [ $1 -eq 0 ]; then
@@ -89,6 +96,7 @@ fi
 /etc/udev/rules.d/99-secureusb.rules
 /usr/share/polkit-1/actions/org.secureusb.policy
 /etc/dbus-1/system.d/org.secureusb.Daemon.conf
+/usr/share/icons/hicolor/scalable/apps/*.svg
 /etc/xdg/autostart/secureusb-client.desktop
 /etc/xdg/autostart/secureusb-indicator.desktop
 /usr/local/bin/secureusb-daemon

@@ -170,7 +170,7 @@ class TestSecureUSBIndicatorStateUpdate(unittest.TestCase):
         self.assertTrue(self.indicator.enabled)
         self.mock_status.set_label.assert_called_with("SecureUSB: Enabled")
         self.mock_indicator_obj.set_icon_full.assert_called_with(
-            "security-high",
+            "secureusb",
             "SecureUSB"
         )
         self.mock_toggle.set_active.assert_called_with(True)
@@ -182,7 +182,7 @@ class TestSecureUSBIndicatorStateUpdate(unittest.TestCase):
         self.assertFalse(self.indicator.enabled)
         self.mock_status.set_label.assert_called_with("SecureUSB: Disabled")
         self.mock_indicator_obj.set_icon_full.assert_called_with(
-            "security-low",
+            "secureusb-disabled",
             "SecureUSB"
         )
         self.mock_toggle.set_active.assert_called_with(False)
