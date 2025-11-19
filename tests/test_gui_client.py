@@ -34,7 +34,7 @@ class TestSecureUSBClient(unittest.TestCase):
 
         mock_notification.new.assert_called_once_with("SecureUSB")
         notification_instance.set_body.assert_called_once_with("Device allowed")
-        mock_icon.new.assert_called_once_with("security-high")
+        mock_icon.new.assert_called_once_with("secureusb")
         notification_instance.set_icon.assert_called_once_with(icon_instance)
         self.client.send_notification.assert_called_once()
 

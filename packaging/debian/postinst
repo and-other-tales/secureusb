@@ -17,6 +17,11 @@ echo "$CONFIG_DIR" > "$POINTER_FILE"
 systemctl daemon-reload
 udevadm control --reload-rules
 
+# Update icon cache
+if command -v gtk-update-icon-cache &> /dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+
 systemctl enable secureusb.service || true
 systemctl restart secureusb.service || true
 

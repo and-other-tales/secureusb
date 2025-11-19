@@ -45,6 +45,9 @@ install -m 644 "$REPO_ROOT/data/polkit/org.secureusb.policy" "$ROOT_DIR/usr/shar
 install -d "$ROOT_DIR/etc/dbus-1/system.d"
 install -m 644 "$REPO_ROOT/data/dbus/org.secureusb.Daemon.conf" "$ROOT_DIR/etc/dbus-1/system.d/org.secureusb.Daemon.conf"
 
+install -d "$ROOT_DIR/usr/share/icons/hicolor/scalable/apps"
+install -m 644 "$REPO_ROOT/data/icons/hicolor/scalable/apps/"*.svg "$ROOT_DIR/usr/share/icons/hicolor/scalable/apps/"
+
 install -d "$ROOT_DIR/etc/xdg/autostart"
 install -m 644 "$REPO_ROOT/data/desktop/secureusb-client.desktop" "$ROOT_DIR/etc/xdg/autostart/secureusb-client.desktop"
 install -m 644 "$REPO_ROOT/data/desktop/secureusb-indicator.desktop" "$ROOT_DIR/etc/xdg/autostart/secureusb-indicator.desktop"

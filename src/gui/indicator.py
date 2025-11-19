@@ -58,7 +58,7 @@ class SecureUSBIndicator:
 
         self.indicator = AppIndicator3.Indicator.new(
             "secureusb",
-            "security-high",
+            "secureusb",
             AppIndicator3.IndicatorCategory.APPLICATION_STATUS
         )
         self.indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
@@ -116,7 +116,7 @@ class SecureUSBIndicator:
         self.enabled = enabled
         self.status_item.set_label(f"SecureUSB: {'Enabled' if enabled else 'Disabled'}")
         self.indicator.set_icon_full(
-            "security-high" if enabled else "security-low",
+            "secureusb" if enabled else "secureusb-disabled",
             "SecureUSB"
         )
         self._updating_toggle = True
