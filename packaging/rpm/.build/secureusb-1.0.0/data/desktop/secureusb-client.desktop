@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=SecureUSB Client
+Comment=USB Device Authorization Client
+Exec=/usr/bin/python3 /opt/secureusb/src/gui/client.py
+Icon=security-high
+Terminal=false
+StartupNotify=false
+Categories=System;Security;
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5
+Hidden=false
+NoDisplay=true

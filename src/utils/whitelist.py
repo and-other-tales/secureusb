@@ -33,6 +33,7 @@ class DeviceWhitelist:
         self.whitelist_file = self.config_dir / "whitelist.json"
 
         self.devices = self._load_whitelist()
+        self._normalize_in_memory_devices()
 
     def _load_whitelist(self) -> Dict[str, Dict]:
         """
@@ -64,6 +65,55 @@ class DeviceWhitelist:
         except Exception as e:
             print(f"Error saving whitelist: {e}")
             return False
+
+    def _normalize_in_memory_devices(self):
+        """Ensure all in-memory entries contain the expected bookkeeping fields."""
+        normalized = {}
+        for serial, device_info in self.devices.items():
+            try:
+                normalized[serial] = self._normalize_device_entry(serial, device_info)
+            except Exception:
+                # Skip entries we cannot normalize; callers can re-import if needed.
+                continue
+        self.devices = normalized
+
+    def _normalize_device_entry(self, serial_number: str, data: Optional[Dict]) -> Dict:
+        """Return a device dictionary with all required keys and sane defaults."""
+        data = data or {}
+
+        vendor_id = str(data.get('vendor_id') or '0000')
+        product_id = str(data.get('product_id') or '0000')
+        vendor_name = data.get('vendor_name') or f"Vendor {vendor_id}"
+        product_name = data.get('product_name') or f"Product {product_id}"
+        notes = data.get('notes') or ""
+
+        def _coerce_float(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        def _coerce_int(value, default: int = 0):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        added_ts = _coerce_float(data.get('added_timestamp')) or time.time()
+        last_used_input = data.get('last_used_timestamp')
+        last_used_ts = _coerce_float(last_used_input) if last_used_input is not None else None
+
+        return {
+            'serial_number': serial_number,
+            'vendor_id': vendor_id,
+            'product_id': product_id,
+            'vendor_name': vendor_name,
+            'product_name': product_name,
+            'notes': notes,
+            'added_timestamp': added_ts,
+            'last_used_timestamp': last_used_ts,
+            'use_count': _coerce_int(data.get('use_count'), 0)
+        }
 
     def add_device(self,
                    serial_number: str,
@@ -253,13 +303,34 @@ class DeviceWhitelist:
             with open(import_path, 'r') as f:
                 imported_devices = json.load(f)
 
+            if not isinstance(imported_devices, dict):
+                raise ValueError("Whitelist export must be a mapping of serial numbers to metadata")
+
+            normalized_devices = {}
+            for serial, device_info in imported_devices.items():
+                serial_str = str(serial).strip()
+                if not serial_str:
+                    continue
+                normalized_devices[serial_str] = self._normalize_device_entry(serial_str, device_info)
+
             if not merge:
-                self.devices = imported_devices
+                self.devices = normalized_devices
             else:
-                # Merge, keeping existing devices and adding new ones
-                for serial, device_info in imported_devices.items():
-                    if serial not in self.devices:
+                # Merge, updating existing metadata while preserving usage stats
+                for serial, device_info in normalized_devices.items():
+                    existing = self.devices.get(serial)
+                    if not existing:
                         self.devices[serial] = device_info
+                        continue
+
+                    merged = existing.copy()
+                    merged.update(device_info)
+
+                    for key in ('use_count', 'last_used_timestamp', 'added_timestamp'):
+                        merged[key] = existing.get(key)
+
+                    merged['serial_number'] = serial
+                    self.devices[serial] = merged
 
             return self._save_whitelist()
 
@@ -281,10 +352,15 @@ class DeviceWhitelist:
         results = []
 
         for device in self.devices.values():
-            if (query_lower in device['serial_number'].lower() or
-                query_lower in device['vendor_name'].lower() or
-                query_lower in device['product_name'].lower() or
-                query_lower in device.get('notes', '').lower()):
+            serial = (device.get('serial_number') or '').lower()
+            vendor = (device.get('vendor_name') or '').lower()
+            product = (device.get('product_name') or '').lower()
+            notes = (device.get('notes') or '').lower()
+
+            if (query_lower in serial or
+                query_lower in vendor or
+                query_lower in product or
+                query_lower in notes):
                 results.append(device)
 
         return results

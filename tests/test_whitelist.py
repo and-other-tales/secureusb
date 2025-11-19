@@ -3,6 +3,7 @@
 Unit tests for whitelist module.
 """
 
+import json
 import unittest
 import tempfile
 import shutil
@@ -237,6 +238,22 @@ class TestDeviceWhitelist(unittest.TestCase):
         results = self.whitelist.search_devices("NOMATCH")
         self.assertEqual(len(results), 0)
 
+    def test_search_devices_handles_missing_fields(self):
+        """Search should not raise when optional fields are missing."""
+        # Simulate a manually edited whitelist entry lacking metadata
+        self.whitelist.devices = {
+            "ABC123": {
+                "serial_number": "ABC123",
+                # vendor_name/product_name intentionally omitted
+                "notes": None
+            }
+        }
+
+        # Should return the device when searching by serial despite missing fields
+        results = self.whitelist.search_devices("abc")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['serial_number'], "ABC123")
+
     def test_export_whitelist(self):
         """Test exporting whitelist."""
         self.whitelist.add_device(
@@ -297,6 +314,74 @@ class TestDeviceWhitelist(unittest.TestCase):
 
         finally:
             shutil.rmtree(other_dir)
+
+    def test_import_whitelist_merge_updates_existing_metadata(self):
+        """Merge mode should refresh metadata without clobbering usage stats."""
+        self.whitelist.add_device(
+            serial_number="ABC123",
+            vendor_id="046d",
+            product_id="c52b",
+            vendor_name="Old Name",
+            product_name="Old Product",
+            notes="Legacy note"
+        )
+
+        # Simulate prior usage so there is history to preserve.
+        self.whitelist.update_usage("ABC123")
+        original = dict(self.whitelist.get_device("ABC123"))
+
+        update_payload = {
+            "ABC123": {
+                "vendor_id": "9999",
+                "product_id": "1111",
+                "vendor_name": "New Name",
+                "product_name": "New Product",
+                "notes": "Updated note"
+            }
+        }
+
+        update_file = self.test_dir / "update.json"
+        update_file.write_text(json.dumps(update_payload))
+
+        self.assertTrue(self.whitelist.import_whitelist(update_file, merge=True))
+
+        refreshed = self.whitelist.get_device("ABC123")
+        self.assertEqual(refreshed["vendor_name"], "New Name")
+        self.assertEqual(refreshed["product_name"], "New Product")
+        self.assertEqual(refreshed["notes"], "Updated note")
+        self.assertEqual(refreshed["vendor_id"], "9999")
+        self.assertEqual(refreshed["product_id"], "1111")
+
+        # Usage data should remain untouched.
+        self.assertEqual(refreshed["use_count"], original["use_count"])
+        self.assertEqual(refreshed["last_used_timestamp"], original["last_used_timestamp"])
+        self.assertEqual(refreshed["added_timestamp"], original["added_timestamp"])
+
+    def test_import_whitelist_normalizes_partial_entries(self):
+        """Imported devices missing metadata should be normalized safely."""
+        raw_data = {
+            "ABC123": {
+                "vendor_id": "046d",
+                "product_id": "c52b",
+                # optional fields intentionally omitted
+            }
+        }
+        export_path = self.test_dir / "raw.json"
+        export_path.write_text(json.dumps(raw_data))
+
+        result = self.whitelist.import_whitelist(export_path, merge=False)
+        self.assertTrue(result)
+
+        device = self.whitelist.get_device("ABC123")
+        self.assertIsNotNone(device)
+        self.assertEqual(device["serial_number"], "ABC123")
+        self.assertEqual(device["vendor_name"], "Vendor 046d")
+        self.assertEqual(device["product_name"], "Product c52b")
+        self.assertEqual(device["use_count"], 0)
+        self.assertIsNone(device["last_used_timestamp"])
+
+        # Updating usage should no longer raise due to missing bookkeeping fields.
+        self.assertTrue(self.whitelist.update_usage("ABC123"))
 
 
 class TestDeviceInfo(unittest.TestCase):

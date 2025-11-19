@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="SecureUSB" Language="1033" Version="$(var.Version)" Manufacturer="SecureUSB" UpgradeCode="B49F1FED-A8BA-4DE4-8CDE-2874F8D5A295">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of SecureUSB is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/yourusername/secureusb" />
+
+    <Feature Id="F_Main" Title="SecureUSB" Level="1">
+      <ComponentGroupRef Id="SecureUSBFiles" />
+      <ComponentRef Id="cmpShortcuts" />
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLDIR" Name="SecureUSB" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="SecureUSBProgramMenu" Name="SecureUSB" />
+      </Directory>
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="cmpShortcuts" Guid="*">
+      <RegistryValue Root="HKLM" Key="Software\SecureUSB" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+      <Shortcut Id="ShortcutSecureUSB" Directory="SecureUSBProgramMenu" Name="SecureUSB Monitor" Target="[INSTALLDIR]\bin\secureusb-windows.cmd" WorkingDirectory="INSTALLDIR" />
+      <Shortcut Id="ShortcutSecureUSBSetup" Directory="SecureUSBProgramMenu" Name="SecureUSB Setup" Target="[INSTALLDIR]\bin\secureusb-setup.cmd" WorkingDirectory="INSTALLDIR" />
+      <RemoveFolder Id="RemoveProgramMenu" Directory="SecureUSBProgramMenu" On="uninstall" />
+    </Component>
+  </Fragment>
+</Wix>
