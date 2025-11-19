@@ -37,6 +37,7 @@ class AuthorizationDialog(Adw.Window):
         self.timeout_seconds = 30
         self.timeout_id = None
         self.toast_overlay = None
+        self.auto_deny_id = None
 
         # Configure window
         self.set_title("USB Device Authorization Required")
@@ -265,6 +266,9 @@ class AuthorizationDialog(Adw.Window):
             GLib.source_remove(self.timeout_id)
             self.timeout_id = None
 
+        # Cancel any pending auto-deny timer before sending the request
+        self._cancel_auto_deny_timer()
+
         # Send authorization request
         result = self.dbus_client.authorize_device(self.device_info, totp_code, mode)
 
@@ -308,6 +312,8 @@ class AuthorizationDialog(Adw.Window):
             GLib.source_remove(self.timeout_id)
             self.timeout_id = None
 
+        self._cancel_auto_deny_timer()
+
         # Send deny request
         device_id = self.device_info.get('device_id', '')
         self.dbus_client.deny_device(device_id)
@@ -316,12 +322,22 @@ class AuthorizationDialog(Adw.Window):
 
     def _auto_deny(self):
         """Auto-deny device on timeout."""
+        if self.auto_deny_id is not None:
+            return
+
         def _deny_and_stop():
             """Invoke deny handler once and stop the GLib timer."""
+            self.auto_deny_id = None
             self._deny_device()
             return False
 
-        GLib.timeout_add(1000, _deny_and_stop)
+        self.auto_deny_id = GLib.timeout_add(1000, _deny_and_stop)
+
+    def _cancel_auto_deny_timer(self):
+        """Cancel the scheduled auto-deny timer if it is pending."""
+        if self.auto_deny_id is not None:
+            GLib.source_remove(self.auto_deny_id)
+            self.auto_deny_id = None
 
     def _show_error(self, message: str):
         """

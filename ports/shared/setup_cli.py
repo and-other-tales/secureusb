@@ -27,7 +27,7 @@ def run_cli_setup(platform_label: str = "Desktop") -> int:
 
     authenticator, recovery_codes = create_new_authenticator()
     secret = authenticator.get_secret()
-    uri = authenticator.get_provisioning_uri(issuer_name="SecureUSB", account_name="SecureUSB")
+    uri = authenticator.get_provisioning_uri(name="SecureUSB", issuer="SecureUSB")
 
     print(
         dedent(

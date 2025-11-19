@@ -194,6 +194,9 @@ class TestAuthorizationDialogAutoDeny(unittest.TestCase):
 
         # Replace deny handler so we can assert call counts.
         self.dialog._deny_device = MagicMock()
+        self.dialog.whitelist_check = MagicMock()
+        self.dialog.whitelist_check.get_active.return_value = False
+        self.dialog.close = MagicMock()
 
     def tearDown(self):
         """Stop patches."""
@@ -222,6 +225,20 @@ class TestAuthorizationDialogAutoDeny(unittest.TestCase):
         result = callback()
         self.dialog._deny_device.assert_called_once_with()
         self.assertFalse(result)
+
+    def test_authorize_cancels_pending_auto_deny_timer(self):
+        """Manual authorization should cancel the scheduled auto-deny callback."""
+        self.dialog.auto_deny_id = 321
+        self.dialog.timeout_id = None
+        self.dialog.dbus_client.authorize_device.return_value = 'success'
+
+        with patch("src.gui.auth_dialog.GLib.source_remove") as mock_remove:
+            self.dialog._authorize_device('full', '123456')
+
+        mock_remove.assert_called_once_with(321)
+        self.assertIsNone(self.dialog.auto_deny_id)
+        self.dialog.dbus_client.authorize_device.assert_called_once()
+        self.dialog.close.assert_called_once()
 
 
 if __name__ == "__main__":

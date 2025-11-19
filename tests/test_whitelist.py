@@ -3,6 +3,7 @@
 Unit tests for whitelist module.
 """
 
+import json
 import unittest
 import tempfile
 import shutil
@@ -313,6 +314,32 @@ class TestDeviceWhitelist(unittest.TestCase):
 
         finally:
             shutil.rmtree(other_dir)
+
+    def test_import_whitelist_normalizes_partial_entries(self):
+        """Imported devices missing metadata should be normalized safely."""
+        raw_data = {
+            "ABC123": {
+                "vendor_id": "046d",
+                "product_id": "c52b",
+                # optional fields intentionally omitted
+            }
+        }
+        export_path = self.test_dir / "raw.json"
+        export_path.write_text(json.dumps(raw_data))
+
+        result = self.whitelist.import_whitelist(export_path, merge=False)
+        self.assertTrue(result)
+
+        device = self.whitelist.get_device("ABC123")
+        self.assertIsNotNone(device)
+        self.assertEqual(device["serial_number"], "ABC123")
+        self.assertEqual(device["vendor_name"], "Vendor 046d")
+        self.assertEqual(device["product_name"], "Product c52b")
+        self.assertEqual(device["use_count"], 0)
+        self.assertIsNone(device["last_used_timestamp"])
+
+        # Updating usage should no longer raise due to missing bookkeeping fields.
+        self.assertTrue(self.whitelist.update_usage("ABC123"))
 
 
 class TestDeviceInfo(unittest.TestCase):

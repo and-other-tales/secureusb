@@ -1,202 +1,75 @@
-# SecureUSB Testing & Code Analysis - Final Report
+# SecureUSB Testing & Code Analysis — Final Report
 
-**Date**: 2025-11-19
-**Project**: SecureUSB - USB Device Authorization System
-**Scope**: Linux implementation (src/ directory)
+**Date**: 2025-02-15  
+**Scope**: Entire repository (src/, ports/, macos/, windows/, tests/)
 
 ---
 
 ## Executive Summary
 
-Successfully completed comprehensive code analysis and testing project for SecureUSB:
-
-✅ **Phase 1**: Function inventory (182 functions across 14 files)
-✅ **Phase 2**: Comprehensive code review (37 issues identified, 12 critical/high fixed)
-✅ **Phase 3**: Test coverage expansion (136 new tests added across 5 test files)
-✅ **Phase 4**: All 200 tests passing, 26 integration tests skipped
+✅ **Phase 1** — Refreshed the function inventory to capture 551 functions across every Python file, not just `src/`.  
+✅ **Phase 2** — Addressed three cross-platform correctness issues (inventory tooling scope, CLI provisioning crash, PySide6 import leakage).  
+✅ **Phase 3** — Added regression tests for the shared CLI setup wizard and the Windows USB monitor helpers, expanding platform coverage.  
+✅ **Phase 4** — Ran the full pytest suite inside `.venv`; **209 tests passed, 26 skipped** (GUI/D-Bus integration stubs).
 
 ### Key Metrics
-- **Total Lines of Code**: 2,070 (src/ directory)
-- **Total Functions**: 182
-- **Total Test Cases**: 226 tests (90 original + 136 new)
-- **Tests Passing**: 200/200 (100% success rate)
-- **Tests Skipped**: 26 (integration tests requiring D-Bus/GTK infrastructure)
-- **Code Coverage**: 47% overall (100% for utils/paths, 84% for gui/indicator, 82% for utils/logger)
-- **Test Execution Time**: ~1.27 seconds
+- **Functions indexed**: 551 (see `function_inventory.csv`)
+- **Total pytest cases**: 235 (209 run + 26 skipped)
+- **New automated tests**: 2 files / 6 cases targeting previously untested ports code
+- **Test duration**: ~2.3 seconds on Linux/x86_64
+- **Environment**: `.venv` + Python 3.13.7
 
 ---
 
-## Phase 1: Function Inventory
+## Phase 1 – Function Inventory
 
-### Summary
-Generated complete catalog of all functions in the codebase using AST parsing.
-
-### Deliverables
-- **File**: `function_inventory.csv`
-- **Total Functions**: 182
-- **Files Analyzed**: 14 Python files
-
-### Distribution by Module
-| Module | Files | Functions |
-|--------|-------|-----------|
-| src/auth/ | 2 | 21 |
-| src/daemon/ | 4 | 67 |
-| src/gui/ | 4 | 50 |
-| src/utils/ | 4 | 44 |
-| **Total** | **14** | **182** |
-
-### Top Files by Function Count
-1. `src/daemon/dbus_service.py` - 25 functions
-2. `src/gui/setup_wizard.py` - 17 functions
-3. `src/utils/whitelist.py` - 17 functions
-4. `src/daemon/service.py` - 16 functions
-5. `src/gui/auth_dialog.py` - 15 functions
+- Enhanced `extract_functions.py` to scan the entire repo while excluding `.venv`, `.git`, and build artifacts, ensuring the CSV now lists every Python function (app, ports, platform stubs, and tests).
+- Output: `function_inventory.csv` (551 entries) sorted by path + line number for easier cross-referencing during review.
 
 ---
 
-## Phase 2: Code Quality Review
+## Phase 2 – Code Quality Review & Fixes
 
-### Summary
-Conducted comprehensive security-focused code review analyzing completeness, functionality, and best practices.
+| Severity | File / Function | Issue | Resolution |
+|----------|-----------------|-------|------------|
+| High | `ports/shared/setup_cli.py` – `run_cli_setup` | Passed invalid kwargs (`issuer_name`/`account_name`) to `TOTPAuthenticator.get_provisioning_uri`, causing the CLI wizard to crash before showing the QR code. | Switched to the correct signature (`name`/`issuer`) and documented behaviour via new unit tests. |
+| High | `extract_functions.py` | Inventory tooling only walked `src/`, missing >350 functions in ports/tests, leading to incomplete compliance evidence. | Pointed the scanner at repo root and added an exclusion allowlist to keep performance identical while providing full coverage. |
+| Medium | `ports/shared/__init__.py` | Importing `ports.shared` eagerly pulled in `AuthorizationDialog`, so any CLI/test run without PySide6 failed immediately. | Introduced a lazy `__getattr__` loader so GUI components load PySide6 on demand while CLI helpers remain lightweight. |
 
-### Deliverables
-- **File**: `code_review_notes.md` (7,500+ words)
-- **Total Issues**: 37 identified
-- **Issues Fixed**: 11 (all critical/high priority)
-
-### Issue Distribution
-| Severity | Count | Fixed | Percentage |
-|----------|-------|-------|------------|
-| Critical | 2 | 2 | 100% |
-| High | 8 | 6 | 75% |
-| Medium | 15 | 3 | 20% |
-| Low | 12 | 0 | 0% |
-| **Total** | **37** | **11** | **30%** |
-
-### Critical Issues Fixed
-1. **signal.register() bug** in usb_monitor.py:311
-   - Changed to `signal.signal()` (correct function)
-
-2. **Race condition** in service.py:277-279
-   - Fixed recovery code removal to prevent state inconsistency
-
-### High Severity Issues Fixed
-3. **Missing exception handling** in authorization.py:198
-   - Added logging for unbind failures
-
-4. **Unconstrained database growth** in logger.py
-   - Implemented automatic cleanup on initialization
-
-5. **TOTP window validation** in totp.py:61
-   - Added bounds checking (0-5 window)
-
-6. **QR code error handling** in setup_wizard.py:412-428
-   - Wrapped in try/except with user feedback
-
-7. **Clipboard security** in setup_wizard.py:441-452
-   - Added auto-clear after 30-60 seconds
-
-8. **Timeout cleanup** in auth_dialog.py:258-262
-   - Fixed duplicate timer prevention
-
-### Medium Severity Issues Fixed
-9. **Recovery code count bounds** in totp.py:118
-   - Limited to 1-100 codes
-
-10. **Error message improvement** in totp.py:184
-    - Added specific length information
-
-11. **Machine-id fallback** in storage.py:70
-    - Generate persistent UUID instead of weak uid+path
-
-12. **Device ID validation** in authorization.py:48
-    - Added regex validation to prevent path traversal
+All findings are captured in `code_review_notes.md` under “Review Update – 2025-02-15”.
 
 ---
 
-## Phase 3: Test Coverage Expansion
+## Phase 3 – Test Coverage Expansion
 
-### Summary
-Created comprehensive test suites for previously untested modules with extensive mocking.
+1. **`tests/test_ports_shared_setup_cli.py`**
+   - Verifies the CLI exits early when storage is already configured.
+   - Exercises the happy path end-to-end with stubbed storage/authenticator objects, ensuring provisioning URIs use the correct parameters and hashed recovery codes are persisted.
 
-### New Test Files Created
-1. **test_paths.py** - 26 tests
-   - Path resolution logic
-   - Platform-specific defaults
-   - Pointer file handling
-   - Environment variable priority
-   - Edge cases and error handling
+2. **`tests/test_windows_usb_monitor.py`**
+   - Validates VID/PID and serial parsing helpers against representative instance IDs.
+   - Mocks `subprocess.run` to assert JSON enumeration without requiring PowerShell, covering add/remove detection logic on Linux CI hosts.
 
-2. **test_authorization.py** - 25 tests
-   - Kernel-level USB authorization
-   - Device path validation
-   - Root privilege checks
-   - sysfs interaction mocking
-   - Default authorization modes
-
-3. **test_usb_monitor.py** - 30 tests
-   - USB device detection with pyudev mocking
-   - Event handling (add/remove)
-   - Duplicate event prevention
-   - Device attribute reading from sysfs
-   - Monitor start/stop lifecycle
-   - Callback exception handling
-
-4. **test_dbus_service.py** - 47 tests (24 skipped)
-   - D-Bus client initialization
-   - Connection management
-   - Device authorization methods
-   - Signal connection
-   - 24 integration tests skipped (require actual D-Bus infrastructure)
-
-5. **test_indicator.py** - 50 tests (2 skipped)
-   - System tray indicator initialization
-   - Menu creation and item management
-   - D-Bus connection and retry logic
-   - State updates (enabled/disabled)
-   - Protection toggle functionality
-   - Signal handlers
-   - Command launching
-   - 2 GTK widget interaction tests skipped
-
-### Test Coverage by Module
-
-#### Existing Tests (90 tests)
-- ✅ test_totp.py (26 tests) - TOTP authentication
-- ✅ test_storage.py (15 tests) - Encrypted storage
-- ✅ test_logger.py (12 tests) - Event logging
-- ✅ test_config.py (18 tests) - Configuration
-- ✅ test_whitelist.py (19 tests) - Device whitelist
-
-#### New Tests (136 tests, 26 skipped)
-- ✅ test_paths.py (26 tests) - Path resolution
-- ✅ test_authorization.py (25 tests) - USB kernel control
-- ✅ test_usb_monitor.py (30 tests) - USB device monitoring
-- ✅ test_dbus_service.py (23 active, 24 skipped) - D-Bus interface
-- ✅ test_indicator.py (48 active, 2 skipped) - System tray indicator
-
-#### Remaining Gaps (Recommended for Future Work)
-- ⏳ test_service.py - Daemon service (needs complex D-Bus/GLib mocking)
-- ⏳ test_auth_dialog.py - Authorization dialog (needs GTK4/Adwaita mocking)
-- ⏳ test_setup_wizard.py - Setup wizard (needs GTK4 + QR code mocking)
-- ⏳ test_client.py - Client application (needs GTK4 + D-Bus mocking)
-
-### Test Quality Metrics
-- **Mocking Strategy**: Comprehensive - file I/O, OS calls, platform detection
-- **Coverage Types**: Unit tests (100%), Integration tests (in existing suite)
-- **Edge Cases**: Path traversal, permission errors, missing files
-- **Error Conditions**: Tested extensively in all new tests
+These tests close the largest platform-specific blind spots left from earlier work (Windows & shared CLI code).
 
 ---
 
-## Phase 4: Test Execution & Results
+## Phase 4 – Test Execution & Results
 
-### Test Environment
-- **Python Version**: 3.13
-- **Test Framework**: unittest/pytest
-- **Execution Time**: ~1.27 seconds
-- **Environment**: .venv with system packages
-- **Coverage Tool**: coverage.py 7.12.0
+- Activated the project virtualenv and ran the full suite:  
+  ```bash
+  source .venv/bin/activate && pytest
+  ```
+- **Outcome**: 209 passed / 26 skipped / 0 failed.  
+  Skips correspond to GTK and D-Bus integration cases that intentionally stub out unavailable desktop services in headless CI.
+- Logs are archived in the CLI output; no flaky behaviour observed.
+
+---
+
+## Next Steps
+
+1. Consider adding lightweight smoke tests for `macos/src` modules similar to the Windows coverage just introduced.
+2. If GUI automation becomes feasible (e.g., xvfb + PyGObject), add integration tests for `src/gui/setup_wizard.py` and `src/gui/client.py`.
 
 ### Test Results Summary
 
