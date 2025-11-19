@@ -1,0 +1,10 @@
+# SecureUSB udev rules
+# Sets USB authorization default to block on system boot
+
+# Set authorized_default=0 for all USB controllers on boot
+# This ensures new USB devices are blocked by default
+ACTION=="add", SUBSYSTEM=="usb", ATTR{authorized_default}=="*", ATTR{authorized_default}="0"
+
+# Log USB device connections (optional)
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/bin/logger -t secureusb 'USB device connected: $env{ID_VENDOR}:$env{ID_MODEL} (serial: $env{ID_SERIAL_SHORT})'"
+ACTION=="remove", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/bin/logger -t secureusb 'USB device disconnected: $env{ID_VENDOR}:$env{ID_MODEL}'"
