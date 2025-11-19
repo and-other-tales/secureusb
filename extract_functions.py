@@ -102,7 +102,7 @@ def scan_directory(directory: Path) -> List[Tuple[str, str, int]]:
     return all_functions
 
 
-def generate_csv(functions: List[Tuple[str, str, int]], output_path: Path):
+def generate_csv(functions: List[Tuple[str, str, int]], output_path: Path, project_root: Path):
     """Generate CSV file with function inventory."""
     # Sort by file path, then line number
     functions.sort(key=lambda x: (x[1], x[2]))
@@ -113,7 +113,7 @@ def generate_csv(functions: List[Tuple[str, str, int]], output_path: Path):
 
         for function_name, filepath, line_number in functions:
             # Convert to relative path from project root
-            rel_path = os.path.relpath(filepath, '/home/david/secureusb')
+            rel_path = os.path.relpath(filepath, project_root)
             writer.writerow([function_name, rel_path, line_number])
 
     print(f"\nGenerated {output_path}")
@@ -122,8 +122,10 @@ def generate_csv(functions: List[Tuple[str, str, int]], output_path: Path):
 
 def main():
     """Main function to extract functions and generate CSV."""
-    src_dir = Path('/home/david/secureusb')
-    output_csv = Path('/home/david/secureusb/function_inventory.csv')
+    # Get project root dynamically
+    project_root = Path(__file__).parent.absolute()
+    src_dir = project_root
+    output_csv = project_root / 'function_inventory.csv'
 
     print("=" * 70)
     print("Function Inventory Generator")
@@ -137,7 +139,7 @@ def main():
     all_functions = scan_directory(src_dir)
 
     # Generate CSV
-    generate_csv(all_functions, output_csv)
+    generate_csv(all_functions, output_csv, project_root)
 
     print()
     print("=" * 70)
@@ -147,7 +149,7 @@ def main():
     # Group by file for summary
     by_file = {}
     for function_name, filepath, line_number in all_functions:
-        rel_path = os.path.relpath(filepath, '/home/david/secureusb')
+        rel_path = os.path.relpath(filepath, project_root)
         if rel_path not in by_file:
             by_file[rel_path] = []
         by_file[rel_path].append(function_name)

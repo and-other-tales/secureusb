@@ -12,6 +12,15 @@ import hashlib
 import time
 from typing import List, Tuple, Optional
 
+# Constants
+TOTP_CODE_LENGTH = 6
+TOTP_TIME_WINDOW_SECONDS = 30
+TOTP_MAX_VALIDATION_WINDOW = 5
+RECOVERY_CODE_LENGTH = 12
+RECOVERY_CODE_FORMAT_SEGMENT_LENGTH = 4
+RECOVERY_CODE_MIN_COUNT = 1
+RECOVERY_CODE_MAX_COUNT = 100
+
 
 class TOTPAuthenticator:
     """Manages TOTP authentication for USB device authorization."""
@@ -70,18 +79,18 @@ class TOTPAuthenticator:
             True if code is valid, False otherwise
         """
         # Validate window parameter to prevent timing attacks
-        window = max(0, min(5, window))
+        window = max(0, min(TOTP_MAX_VALIDATION_WINDOW, window))
 
         # Remove any spaces or dashes from input
         code = code.replace(' ', '').replace('-', '')
 
         # Check if code is 6 digits
-        if not code.isdigit() or len(code) != 6:
+        if not code.isdigit() or len(code) != TOTP_CODE_LENGTH:
             return False
 
         # Prevent code reuse within the same time window
         current_time = time.time()
-        if code == self._last_used_code and (current_time - self._last_used_time) < 30:
+        if code == self._last_used_code and (current_time - self._last_used_time) < TOTP_TIME_WINDOW_SECONDS:
             return False
 
         # Verify the code
@@ -111,7 +120,7 @@ class TOTPAuthenticator:
         Returns:
             Seconds until next code generation (0-30)
         """
-        return 30 - (int(time.time()) % 30)
+        return TOTP_TIME_WINDOW_SECONDS - (int(time.time()) % TOTP_TIME_WINDOW_SECONDS)
 
 
 class RecoveryCodeManager:
@@ -127,16 +136,24 @@ class RecoveryCodeManager:
 
         Returns:
             List of recovery codes in format XXXX-XXXX-XXXX
+
+        Raises:
+            TypeError: If count is not an integer
         """
+        # Validate type
+        if not isinstance(count, int):
+            raise TypeError(f"count must be an integer, got {type(count).__name__}")
+
         # Validate count to prevent resource exhaustion
-        count = max(1, min(100, count))
+        count = max(RECOVERY_CODE_MIN_COUNT, min(RECOVERY_CODE_MAX_COUNT, count))
 
         codes = []
         for _ in range(count):
             # Generate 12 random characters using base32 alphabet
-            code = ''.join(secrets.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567') for _ in range(12))
+            code = ''.join(secrets.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567') for _ in range(RECOVERY_CODE_LENGTH))
             # Format as XXXX-XXXX-XXXX
-            formatted = f"{code[0:4]}-{code[4:8]}-{code[8:12]}"
+            seg_len = RECOVERY_CODE_FORMAT_SEGMENT_LENGTH
+            formatted = f"{code[0:seg_len]}-{code[seg_len:seg_len*2]}-{code[seg_len*2:seg_len*3]}"
             codes.append(formatted)
 
         return codes
@@ -181,16 +198,25 @@ class RecoveryCodeManager:
 
         Returns:
             Formatted code as XXXX-XXXX-XXXX
+
+        Raises:
+            TypeError: If code is not a string
+            ValueError: If code is not 12 alphanumeric characters
         """
+        # Validate type
+        if not isinstance(code, str):
+            raise TypeError(f"code must be a string, got {type(code).__name__}")
+
         # Remove all non-alphanumeric characters and convert to uppercase
         clean = ''.join(c for c in code.upper() if c.isalnum())
 
         # Check length
-        if len(clean) != 12:
-            raise ValueError(f"Recovery code must be 12 characters, got {len(clean)}")
+        if len(clean) != RECOVERY_CODE_LENGTH:
+            raise ValueError(f"Recovery code must be {RECOVERY_CODE_LENGTH} characters, got {len(clean)}")
 
         # Format with dashes
-        return f"{clean[0:4]}-{clean[4:8]}-{clean[8:12]}"
+        seg_len = RECOVERY_CODE_FORMAT_SEGMENT_LENGTH
+        return f"{clean[0:seg_len]}-{clean[seg_len:seg_len*2]}-{clean[seg_len*2:seg_len*3]}"
 
 
 def create_new_authenticator() -> Tuple[TOTPAuthenticator, List[str]]:
