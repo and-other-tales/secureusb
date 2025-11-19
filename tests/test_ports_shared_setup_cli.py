@@ -91,10 +91,13 @@ class TestRunCliSetup(unittest.TestCase):
         authenticator = DummyAuthenticator()
         recovery_codes = ["ABCD-EFGH-IJKL"]
 
+        # Mock input to provide: 1) TOTP code for verification, 2) Enter key after saving codes
+        input_responses = iter(["123456", ""])
+
         with patch.object(setup_cli, "SecureStorage", return_value=storage), \
              patch.object(setup_cli, "create_new_authenticator", return_value=(authenticator, recovery_codes)), \
              patch.object(setup_cli.qrcode, "QRCode", DummyQRCode), \
-             patch.object(setup_cli, "input", lambda prompt='': "123456"):
+             patch.object(setup_cli, "input", lambda prompt='': next(input_responses)):
             exit_code = setup_cli.run_cli_setup("Desktop")
 
         self.assertEqual(exit_code, 0)

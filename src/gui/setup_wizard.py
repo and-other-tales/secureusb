@@ -50,8 +50,8 @@ class SetupWizard(Adw.Window):
         self.pages = [
             self._create_welcome_page(),
             self._create_qr_page(),
-            self._create_recovery_codes_page(),
             self._create_test_page(),
+            self._create_recovery_codes_page(),
             self._create_complete_page()
         ]
 
@@ -137,10 +137,12 @@ This setup wizard will guide you through the configuration.
 
         # Instructions
         instructions = """
-1. Install Google Authenticator on your phone
+1. Install Google Authenticator (or any TOTP app) on your phone
 2. Open the app and tap '+' to add a new account
 3. Select 'Scan QR code'
 4. Scan the QR code below
+
+You'll verify it's working on the next screen.
         """
 
         inst_label = Gtk.Label(label=instructions.strip())
@@ -198,9 +200,18 @@ This setup wizard will guide you through the configuration.
         box.set_margin_end(40)
 
         # Title
-        title = Gtk.Label(label="Recovery Codes")
+        title = Gtk.Label(label="Save Your Recovery Codes")
         title.add_css_class("title-2")
         box.append(title)
+
+        # Info text
+        info_text = Gtk.Label(
+            label="Great! Your authenticator is working correctly.\n\nNow save these backup recovery codes:"
+        )
+        info_text.set_wrap(True)
+        info_text.set_justify(Gtk.Justification.CENTER)
+        info_text.set_margin_bottom(10)
+        box.append(info_text)
 
         # Warning
         warning_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -264,7 +275,7 @@ This setup wizard will guide you through the configuration.
         self.recovery_next_button = Gtk.Button(label="Next")
         self.recovery_next_button.add_css_class("suggested-action")
         self.recovery_next_button.set_sensitive(False)
-        self.recovery_next_button.connect("clicked", lambda b: self._next_page())
+        self.recovery_next_button.connect("clicked", lambda b: self._save_and_complete())
         button_box.append(self.recovery_next_button)
 
         # Enable next button when checkbox is checked
@@ -284,13 +295,13 @@ This setup wizard will guide you through the configuration.
         box.set_valign(Gtk.Align.CENTER)
 
         # Title
-        title = Gtk.Label(label="Test Your Authenticator")
+        title = Gtk.Label(label="Verify Your Authenticator")
         title.add_css_class("title-2")
         box.append(title)
 
         # Instructions
         instructions = Gtk.Label(
-            label="Enter the 6-digit code from your authenticator app to verify it's working correctly."
+            label="Enter the 6-digit code from your authenticator app to verify it's working correctly.\n\nAfter verification, you'll receive backup recovery codes."
         )
         instructions.set_wrap(True)
         instructions.set_justify(Gtk.Justification.CENTER)
@@ -488,10 +499,7 @@ on boot.
             self.test_result_label.remove_css_class("error")
             self.test_result_label.add_css_class("success")
 
-            # Save configuration
-            self._save_configuration()
-
-            # Go to completion page
+            # Go to recovery codes page (configuration will be saved after codes are shown)
             self._next_page()
 
         else:
@@ -512,6 +520,11 @@ on boot.
             print("✓ Configuration saved successfully")
         else:
             print("✗ Error saving configuration")
+
+    def _save_and_complete(self):
+        """Save configuration and proceed to completion page."""
+        self._save_configuration()
+        self._next_page()
 
     def _finish_setup(self):
         """Finish setup and close wizard."""

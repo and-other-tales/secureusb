@@ -34,6 +34,7 @@ def run_cli_setup(platform_label: str = "Desktop") -> int:
             """
             1. Install Google Authenticator (or any TOTP app) on your phone.
             2. Add a new account using the secret below or by scanning the QR.
+            3. You'll verify it's working by entering a code next.
             """
         ).strip()
     )
@@ -44,9 +45,10 @@ def run_cli_setup(platform_label: str = "Desktop") -> int:
     qr.make(fit=True)
     qr.print_ascii(invert=True)
 
-    print("\nRecovery codes (store these securely):")
-    for idx, code in enumerate(recovery_codes, 1):
-        print(f"  {idx:2d}. {code}")
+    # Verify TOTP is working before showing recovery codes
+    print("\n" + "=" * 60)
+    print(" Verify Your Authenticator ".center(60, "="))
+    print("=" * 60)
 
     while True:
         user_code = input("\nEnter the current 6-digit TOTP code to confirm setup: ").strip()
@@ -55,9 +57,22 @@ def run_cli_setup(platform_label: str = "Desktop") -> int:
             continue
 
         if authenticator.verify_code(user_code):
+            print("✓ Code verified successfully!")
             break
 
-        print("Code did not match. Try again; it changes every 30 seconds.")
+        print("✗ Code did not match. Try again; it changes every 30 seconds.")
+
+    # Show recovery codes only after successful verification
+    print("\n" + "=" * 60)
+    print(" Save Your Recovery Codes ".center(60, "="))
+    print("=" * 60)
+    print("\nGreat! Your authenticator is working correctly.")
+    print("\nNow save these backup recovery codes in a safe place:")
+    print("(You can use them if you lose access to your authenticator app)\n")
+    for idx, code in enumerate(recovery_codes, 1):
+        print(f"  {idx:2d}. {code}")
+
+    input("\nPress Enter after you've saved these codes...")
 
     hashed_codes = [RecoveryCodeManager.hash_code(code) for code in recovery_codes]
     if not storage.save_auth_data(secret, hashed_codes):
