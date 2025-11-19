@@ -16,6 +16,21 @@ SecureUSB protects your computer from unauthorized USB devices by requiring TOTP
 - 🎨 **Native GNOME Integration**: Beautiful GTK4/Libadwaita interface
 - 🚀 **Automatic Startup**: Runs automatically on system boot
 
+## Architecture Overview
+
+```mermaid
+flowchart LR
+    USB[USB Device] -->|connects| Kernel[Linux Kernel]
+    Kernel -->|udev rule triggers| Daemon[SecureUSB Daemon]
+    Daemon -->|requests code| UI[GTK Authorization Dialog]
+    UI -->|TOTP or recovery code| User((User))
+    User -->|approves/denies| UI
+    Daemon -->|policy decision| Ports{USB Access}
+    Daemon -->|log + persist| Storage[(Config & Events DB)]
+    Daemon -->|status updates| Indicator[Tray Indicator]
+    Ports -->|allow / deny / power-only| USB
+```
+
 ## Screenshots
 
 ### Authorization Dialog
@@ -323,18 +338,14 @@ Edit `/var/lib/secureusb/config.json`:
    - `config.py` - Configuration management
    - `whitelist.py` - Device whitelist management
 
-### Platform Ports
+### Platform Support
 
 - **Linux**: Full daemon + GTK workflow (default `install.sh`).
-- **Windows 11** (`windows/`): PySide6 desktop agent that relies on `pnputil`
-  to disable/enable USB devices. See `windows/README.md` for setup details.
-- **macOS 12+** (`macos/`): PySide6 UI with IOKit integration and optional
-  launchd service. See `macos/README.md`.
 
 ### Native Packages
 
-Packaging scripts for `.pkg`, `.msi`, and `.deb` installers live under
-`packaging/`. See `packaging/README.md` for build instructions.
+The Debian package builder lives under `packaging/debian`. See
+`packaging/README.md` for details.
 
 ## Troubleshooting
 
@@ -439,9 +450,7 @@ secureusb/
 │   └── desktop/         # autostart entries
 ├── tests/               # Unit tests
 ├── docs/                # Documentation
-├── macos/               # macOS port + pkg builder
-├── windows/             # Windows port + MSI builder
-├── packaging/           # Cross-platform packaging scripts
+├── packaging/           # Debian packaging scripts
 ├── install.sh           # Installation script
 ├── uninstall.sh         # Uninstallation script
 ├── requirements.txt     # Python dependencies

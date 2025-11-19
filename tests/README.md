@@ -114,6 +114,15 @@ Comprehensive unit and integration tests for all SecureUSB modules.
 - **Test Success Rate: 100%**
 - **Code Coverage: High (all core functions tested)**
 
+```mermaid
+graph TD
+    A[SecureUSB Tests] --> B[TOTP & Recovery Codes<br/>26 tests]
+    A --> C[Secure Storage<br/>15 tests]
+    A --> D[Logger<br/>12 tests]
+    A --> E[Configuration<br/>18 tests]
+    A --> F[Whitelist<br/>19 tests]
+```
+
 ---
 
 ## Running Tests

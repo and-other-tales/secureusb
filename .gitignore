@@ -48,3 +48,6 @@ Thumbs.db
 # Backup files
 *.bak
 *.backup
+
+# Packaging artifacts
+packaging/

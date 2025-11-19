@@ -1,62 +1,21 @@
 # SecureUSB Packaging
 
-This directory contains helper scripts for producing native installers for each
-platform:
+This directory contains helper scripts for producing the native Debian/Ubuntu
+installer:
 
-- **macOS `.pkg`** – creates a signed-ready installer that copies SecureUSB into
-  `/opt/secureusb`, installs a LaunchDaemon, ensures dependencies are installed,
-  and prepares the shared config directory.
-- **Windows `.msi`** – uses the WiX Toolset to install the SecureUSB port under
-  `%ProgramFiles%\SecureUSB`, add Start Menu entries, and drop helper scripts.
 - **Debian `.deb`** – builds a dpkg archive that installs SecureUSB into
   `/opt/secureusb`, registers the systemd unit/udev rules/polkit policy,
   and prepares the GNOME indicator autostart entry.
 
 All packaging scripts assume they are executed from the repository root.
 
-## macOS (`macos/pkg/build_pkg.sh`)
+## Debian Packaging Flow
 
-Requirements:
-
-- Xcode command-line tools (`pkgbuild`, `productbuild`)
-- Python 3 (system default is used for dependency installation)
-
-Usage:
-
-```bash
-./macos/pkg/build_pkg.sh 1.0.0
-# Outputs: macos/pkg/dist/SecureUSB-1.0.0.pkg
+```mermaid
+flowchart LR
+    Repo[SecureUSB Repo] -->|packaging/debian/build_deb.sh| DebPkg[secureusb_<ver>_all.deb]
+    DebPkg -->|install| DebTarget[/Debian/Ubuntu host/]
 ```
-
-The resulting package:
-
-- Installs the repo to `/opt/secureusb`
-- Installs `/Library/LaunchDaemons/org.secureusb.agent.plist`
-- Creates wrappers under `/usr/local/bin` (`secureusb-setup`, `secureusb-macos`)
-- Runs `pip install -r macos/requirements.txt` during `postinstall`
-- Initializes `/Library/Application Support/SecureUSB`
-
-## Windows (`windows/msi/build_msi.ps1`)
-
-Requirements:
-
-- Windows 11 with PowerShell 5+
-- WiX Toolset (`candle.exe`, `light.exe`) in `PATH`
-- Python 3 (`py` launcher or `python`)
-
-Usage (PowerShell):
-
-```powershell
-pwsh windows/msi/build_msi.ps1 -Version 1.0.0
-# Outputs: windows/msi/dist/SecureUSB-1.0.0.msi
-```
-
-Features:
-
-- Installs files under `%ProgramFiles%\SecureUSB`
-- Adds Start Menu shortcuts for setup and the USB monitor
-- Registers wrappers (`secureusb-windows.ps1`) in `%ProgramFiles%\SecureUSB`
-- Runs `pip install -r windows/requirements.txt` on install
 
 ## Debian/Ubuntu (`packaging/debian/build_deb.sh`)
 
@@ -80,11 +39,8 @@ This package:
 
 > **Note:** The `.deb` expects to be installed with `sudo dpkg -i`. The post-install script invokes `pip3` to install Python dependencies system-wide.
 
-## Signing / Notarization
+## Signing
 
-The scripts do not sign the resulting artifacts. To distribute publicly,
-sign/notarize according to each platform's requirements:
-
-- macOS: `productsign`, Apple notarization
-- Windows: `signtool.exe`
-- Debian: `dpkg-sig` or repository-level signing
+The script does not sign the resulting artifact. To distribute publicly,
+consider signing the package with `dpkg-sig` or publishing via a signed APT
+repository.
