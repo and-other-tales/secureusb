@@ -13,7 +13,8 @@ SecureUSB protects your computer from unauthorized USB devices by requiring TOTP
 - 📋 **Device Whitelisting**: Remember trusted devices (still requires TOTP)
 - 📊 **Audit Logging**: Complete history of all USB connection attempts
 - 🔐 **Recovery Codes**: Emergency access if you lose your phone
-- 🎨 **Native GNOME Integration**: Beautiful GTK4/Libadwaita interface
+- 🎨 **Native GNOME Integration**: Beautiful GTK4/Libadwaita interface with system tray indicator
+- 🔒 **PolicyKit Security**: Admin password required for all configuration changes and indicator management
 - 🚀 **Automatic Startup**: Runs automatically on system boot
 
 ## Screenshots
@@ -255,6 +256,16 @@ Edit `/var/lib/secureusb/config.json`:
 - **Google Authenticator**: Compatible with all TOTP apps
 - **Recovery Codes**: 10 one-time use backup codes
 - **Code Reuse Prevention**: Same code can't be used twice in 30-second window
+
+### System Tray Indicator Security
+- **PolicyKit Integration**: All indicator menu actions require administrator authentication
+- **Protected Operations**:
+  - Enable/Disable USB Protection - requires admin password
+  - Run Setup Wizard - requires admin password
+  - Open Authorization UI - requires admin password
+  - Quit Indicator - requires admin password
+- **Prevents Unauthorized Changes**: Users cannot disable protection or modify settings without authentication
+- **Tamper Resistance**: Indicator cannot be closed by non-admin users
 
 ### Encryption
 - TOTP secrets encrypted with AES-256

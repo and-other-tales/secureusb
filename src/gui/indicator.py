@@ -9,6 +9,7 @@ reflects the daemon's protection state in real time.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from typing import Optional
@@ -16,7 +17,8 @@ from typing import Optional
 import gi
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib, Gio
+gi.require_version('Polkit', '1.0')
+from gi.repository import Gtk, GLib, Gio, Polkit
 
 INDICATOR_MODULE = None
 
@@ -55,6 +57,7 @@ class SecureUSBIndicator:
         self.dbus_client: Optional[DBusClient] = None
         self.enabled = False
         self._updating_toggle = False
+        self.polkit_authority = Polkit.Authority.get_sync(None)
 
         self.indicator = AppIndicator3.Indicator.new(
             "secureusb",
@@ -69,23 +72,23 @@ class SecureUSBIndicator:
         self.menu.append(self.status_item)
 
         self.toggle_item = Gtk.CheckMenuItem(label="Enable Protection")
-        self.toggle_item.connect("toggled", self._on_toggle)
+        self.toggle_item.connect("toggled", self._on_toggle_with_auth)
         self.menu.append(self.toggle_item)
 
         self.menu.append(Gtk.SeparatorMenuItem())
 
         self.setup_item = Gtk.MenuItem(label="Run Setup Wizard")
-        self.setup_item.connect("activate", lambda *_: self._launch_command('secureusb-setup'))
+        self.setup_item.connect("activate", self._on_setup_wizard)
         self.menu.append(self.setup_item)
 
         self.client_item = Gtk.MenuItem(label="Open Authorization UI")
-        self.client_item.connect("activate", lambda *_: self._launch_command('secureusb-client'))
+        self.client_item.connect("activate", self._on_authorization_ui)
         self.menu.append(self.client_item)
 
         self.menu.append(Gtk.SeparatorMenuItem())
 
         quit_item = Gtk.MenuItem(label="Quit Indicator")
-        quit_item.connect("activate", lambda *_: Gtk.main_quit())
+        quit_item.connect("activate", self._on_quit)
         self.menu.append(quit_item)
 
         self.menu.show_all()
@@ -124,9 +127,44 @@ class SecureUSBIndicator:
         self.toggle_item.set_active(enabled)
         self._updating_toggle = False
 
-    def _on_toggle(self, widget):
+    def _check_polkit_auth(self, action_id: str) -> bool:
+        """Check if user is authorized for a PolicyKit action."""
+        try:
+            # Create subject from current process
+            subject = Polkit.UnixProcess.new_for_owner(
+                os.getpid(),
+                0,  # start_time (0 = auto-detect from /proc)
+                os.getuid()
+            )
+
+            result = self.polkit_authority.check_authorization_sync(
+                subject,
+                action_id,
+                None,  # details
+                Polkit.CheckAuthorizationFlags.ALLOW_USER_INTERACTION,
+                None   # cancellable
+            )
+
+            return result.get_is_authorized()
+        except Exception as exc:
+            print(f"PolicyKit authorization check failed: {exc}")
+            return False
+
+    def _on_toggle_with_auth(self, widget):
         if self._updating_toggle:
             return
+
+        # Check authentication
+        if not self._check_polkit_auth("org.secureusb.enable-disable"):
+            print("PolicyKit authorization denied for enable-disable")
+            self._updating_toggle = True
+            self.toggle_item.set_active(self.enabled)
+            self._updating_toggle = False
+            return
+
+        self._on_toggle(widget)
+
+    def _on_toggle(self, widget):
         if not self.dbus_client or not self.dbus_client.interface:
             self.toggle_item.set_active(self.enabled)
             return
@@ -136,6 +174,27 @@ class SecureUSBIndicator:
         except Exception as exc:
             print(f"Error toggling protection: {exc}")
             self.toggle_item.set_active(self.enabled)
+
+    def _on_setup_wizard(self, widget):
+        """Launch setup wizard with PolicyKit authentication."""
+        if not self._check_polkit_auth("org.secureusb.configure"):
+            print("PolicyKit authorization denied for configure")
+            return
+        self._launch_command('secureusb-setup')
+
+    def _on_authorization_ui(self, widget):
+        """Launch authorization UI with PolicyKit authentication."""
+        if not self._check_polkit_auth("org.secureusb.configure"):
+            print("PolicyKit authorization denied for configure")
+            return
+        self._launch_command('secureusb-client')
+
+    def _on_quit(self, widget):
+        """Quit indicator with PolicyKit authentication."""
+        if not self._check_polkit_auth("org.secureusb.manage-indicator"):
+            print("PolicyKit authorization denied for manage-indicator")
+            return
+        Gtk.main_quit()
 
     @staticmethod
     def _launch_command(command: str):

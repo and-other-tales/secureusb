@@ -357,18 +357,24 @@ if pgrep -x "gnome-shell" > /dev/null 2>&1; then
     # Try to enable the extension for the current user
     EXT_ENABLED=false
     for EXT_ID in "ubuntu-appindicators@ubuntu.com" "appindicatorsupport@rgcjonas.gmail.com"; do
+        # Check if extension exists (installed or available)
         if sudo -u "$ACTUAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" \
-           gnome-extensions list --user 2>/dev/null | grep -q "$EXT_ID"; then
-            print_info "Enabling AppIndicator extension: $EXT_ID"
+           gnome-extensions list 2>/dev/null | grep -q "$EXT_ID"; then
+            print_info "Found AppIndicator extension: $EXT_ID"
+            # Try to enable it
             if sudo -u "$ACTUAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" \
                gnome-extensions enable "$EXT_ID" 2>/dev/null; then
                 EXT_ENABLED=true
                 print_success "AppIndicator extension enabled successfully!"
                 echo ""
-                print_warning "Please restart GNOME Shell for the extension to take effect:"
+                print_warning "IMPORTANT: Please restart GNOME Shell for the tray icon to appear:"
                 echo "  - Press Alt+F2"
                 echo "  - Type 'r' and press Enter"
                 echo "  - Or log out and log back in"
+                echo ""
+            else
+                print_warning "Extension found but could not be enabled. Try manually:"
+                echo "  gnome-extensions enable $EXT_ID"
                 echo ""
             fi
             break

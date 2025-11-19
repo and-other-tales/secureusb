@@ -38,4 +38,14 @@
     </defaults>
   </action>
 
+  <action id="org.secureusb.manage-indicator">
+    <description>Manage SecureUSB indicator</description>
+    <message>Authentication is required to manage the SecureUSB indicator</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
 </policyconfig>
