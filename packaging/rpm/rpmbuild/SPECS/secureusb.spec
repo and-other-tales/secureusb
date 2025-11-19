@@ -7,6 +7,7 @@ URL:            https://github.com/yourusername/secureusb
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
 Requires:       python3, python3-gi, python3-dbus, systemd, udev, polkit-1
+Recommends:     gnome-shell-extension-appindicator
 
 %description
 SecureUSB blocks USB ports by default and prompts for TOTP-based authorization
@@ -77,9 +78,36 @@ chmod 0755 %{buildroot}/usr/local/bin/secureusb-indicator
 if [ $1 -eq 1 ]; then
     /bin/systemctl enable --now secureusb.service >/dev/null 2>&1 || :
 fi
+
 # Update icon cache
 if command -v gtk-update-icon-cache &> /dev/null; then
     gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || :
+fi
+
+# Try to install and enable GNOME AppIndicator extension for GNOME users
+if command -v gnome-shell &> /dev/null; then
+    echo "Detected GNOME Shell - ensuring AppIndicator extension is available"
+
+    # Try to install the extension package if not already installed
+    if ! rpm -qa | grep -q gnome-shell-extension-appindicator; then
+        echo "Installing GNOME AppIndicator extension..."
+        yum install -y gnome-shell-extension-appindicator 2>/dev/null || dnf install -y gnome-shell-extension-appindicator 2>/dev/null || :
+    fi
+
+    # Find the actual user (not root) to enable the extension for
+    ACTUAL_USER="${SUDO_USER:-$USER}"
+    if [ "$ACTUAL_USER" != "root" ]; then
+        # Try to enable the extension - check for different extension IDs
+        for EXT_ID in "ubuntu-appindicators@ubuntu.com" "appindicatorsupport@rgcjonas.gmail.com"; do
+            if sudo -u "$ACTUAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" \
+               gnome-extensions list --user 2>/dev/null | grep -q "$EXT_ID"; then
+                echo "Enabling AppIndicator extension: $EXT_ID"
+                sudo -u "$ACTUAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" \
+                    gnome-extensions enable "$EXT_ID" 2>/dev/null || :
+                break
+            fi
+        done
+    fi
 fi
 
 %preun

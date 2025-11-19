@@ -325,19 +325,64 @@ echo "  sudo systemctl status secureusb - Check daemon status"
 echo "  sudo systemctl restart secureusb - Restart daemon"
 echo ""
 
-# Check if GNOME Shell is running and extension is not installed
+# Auto-install and enable GNOME AppIndicator extension for GNOME users
 if pgrep -x "gnome-shell" > /dev/null 2>&1; then
-    if ! gnome-extensions list --enabled 2>/dev/null | grep -qi appindicator; then
-        print_warning "GNOME AppIndicator Extension Not Detected!"
+    print_info "Detected GNOME Shell - setting up AppIndicator extension"
+
+    # Check if extension package is installed
+    EXT_INSTALLED=false
+    if command -v dpkg &> /dev/null; then
+        dpkg -l 2>/dev/null | grep -q gnome-shell-extension-appindicator && EXT_INSTALLED=true
+    elif command -v rpm &> /dev/null; then
+        rpm -qa 2>/dev/null | grep -q gnome-shell-extension-appindicator && EXT_INSTALLED=true
+    fi
+
+    # Install the extension package if not installed
+    if [ "$EXT_INSTALLED" = false ]; then
+        print_info "Installing GNOME AppIndicator extension..."
+        if command -v apt-get &> /dev/null; then
+            apt-get install -y gnome-shell-extension-appindicator 2>/dev/null || \
+                print_warning "Could not auto-install extension. Install manually: sudo apt install gnome-shell-extension-appindicator"
+        elif command -v dnf &> /dev/null; then
+            dnf install -y gnome-shell-extension-appindicator 2>/dev/null || \
+                print_warning "Could not auto-install extension. Install manually: sudo dnf install gnome-shell-extension-appindicator"
+        elif command -v yum &> /dev/null; then
+            yum install -y gnome-shell-extension-appindicator 2>/dev/null || \
+                print_warning "Could not auto-install extension. Install manually: sudo yum install gnome-shell-extension-appindicator"
+        else
+            print_warning "Unknown package manager. Install manually from: https://extensions.gnome.org/extension/615/appindicator-support/"
+        fi
+    fi
+
+    # Try to enable the extension for the current user
+    EXT_ENABLED=false
+    for EXT_ID in "ubuntu-appindicators@ubuntu.com" "appindicatorsupport@rgcjonas.gmail.com"; do
+        if sudo -u "$ACTUAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" \
+           gnome-extensions list --user 2>/dev/null | grep -q "$EXT_ID"; then
+            print_info "Enabling AppIndicator extension: $EXT_ID"
+            if sudo -u "$ACTUAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$ACTUAL_USER")/bus" \
+               gnome-extensions enable "$EXT_ID" 2>/dev/null; then
+                EXT_ENABLED=true
+                print_success "AppIndicator extension enabled successfully!"
+                echo ""
+                print_warning "Please restart GNOME Shell for the extension to take effect:"
+                echo "  - Press Alt+F2"
+                echo "  - Type 'r' and press Enter"
+                echo "  - Or log out and log back in"
+                echo ""
+            fi
+            break
+        fi
+    done
+
+    if [ "$EXT_ENABLED" = false ]; then
+        print_warning "Could not automatically enable AppIndicator extension"
         echo ""
-        echo "Modern GNOME requires the AppIndicator extension to show the tray icon."
+        echo "Please enable it manually:"
+        echo "  Method 1:"
+        echo "    gnome-extensions enable ubuntu-appindicators@ubuntu.com"
         echo ""
-        echo "Install it with one of these methods:"
-        echo "  Method 1 (Recommended):"
-        echo "    sudo apt install gnome-shell-extension-appindicator"
-        echo "    gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com"
-        echo ""
-        echo "  Method 2 (Manual):"
+        echo "  Method 2 (if above fails):"
         echo "    Visit: https://extensions.gnome.org/extension/615/appindicator-support/"
         echo ""
         echo "Then restart GNOME Shell (Alt+F2, type 'r', press Enter)"

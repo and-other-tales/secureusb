@@ -163,14 +163,23 @@ class SecureUSBIndicator:
                     timeout=2
                 )
 
-                if result.returncode == 0 and 'appindicator' not in result.stdout.lower():
+                # Check for both possible extension IDs
+                ext_enabled = False
+                if result.returncode == 0:
+                    for ext_id in ['ubuntu-appindicators@ubuntu.com', 'appindicatorsupport@rgcjonas.gmail.com']:
+                        if ext_id in result.stdout:
+                            ext_enabled = True
+                            break
+
+                if not ext_enabled:
                     # AppIndicator extension not enabled
                     notification = Gio.Notification.new("SecureUSB Indicator Started")
                     notification.set_body(
                         "The indicator is running, but may not be visible in the top bar.\n"
                         "Modern GNOME requires the AppIndicator extension.\n\n"
-                        "Install it with:\n"
-                        "sudo apt install gnome-shell-extension-appindicator"
+                        "Enable it with:\n"
+                        "gnome-extensions enable ubuntu-appindicators@ubuntu.com\n\n"
+                        "Then restart GNOME Shell (Alt+F2, type 'r', press Enter)"
                     )
                     notification.set_icon(Gio.ThemedIcon.new("secureusb"))
 
@@ -185,7 +194,7 @@ class SecureUSBIndicator:
                             '--icon=secureusb',
                             'SecureUSB Indicator Started',
                             'The indicator is running but may not be visible. '
-                            'Install gnome-shell-extension-appindicator to see it in the top bar.'
+                            'Enable the extension: gnome-extensions enable ubuntu-appindicators@ubuntu.com'
                         ], timeout=2)
         except Exception:
             pass  # Silently fail - notification is optional
