@@ -1,0 +1,170 @@
+#!/bin/bash
+#
+# SecureUSB macOS Postinstall Script
+# Runs after package installation to set up the environment
+#
+
+set -e
+
+INSTALL_DIR="/opt/secureusb"
+CONFIG_DIR="/Library/Application Support/SecureUSB"
+LOG_DIR="/Library/Logs/SecureUSB"
+LAUNCHDAEMON_PLIST="/Library/LaunchDaemons/org.secureusb.daemon.plist"
+
+echo "==> SecureUSB Post-installation..."
+
+# Create necessary directories
+echo "Creating application directories..."
+mkdir -p "$CONFIG_DIR"
+mkdir -p "$LOG_DIR"
+chmod 755 "$CONFIG_DIR"
+chmod 755 "$LOG_DIR"
+
+# Set proper permissions on installation directory
+echo "Setting permissions on $INSTALL_DIR..."
+chown -R root:wheel "$INSTALL_DIR"
+chmod -R 755 "$INSTALL_DIR"
+
+# Install Python dependencies
+echo "Installing Python dependencies..."
+if command -v pip3 >/dev/null 2>&1; then
+    pip3 install --upgrade --no-warn-script-location -r "$INSTALL_DIR/macos/requirements.txt" 2>&1 | grep -v "WARNING: Running pip as the 'root'" || true
+else
+    echo "Warning: pip3 not found. Please install dependencies manually:"
+    echo "  pip3 install -r $INSTALL_DIR/macos/requirements.txt"
+fi
+
+# Install LaunchDaemon plist
+echo "Installing LaunchDaemon..."
+cp "$INSTALL_DIR/macos/org.secureusb.daemon.plist" "$LAUNCHDAEMON_PLIST"
+chown root:wheel "$LAUNCHDAEMON_PLIST"
+chmod 644 "$LAUNCHDAEMON_PLIST"
+
+# Create wrapper scripts in /usr/local/bin
+echo "Creating wrapper scripts..."
+
+cat > /usr/local/bin/secureusb-setup <<'EOF'
+#!/bin/bash
+cd /opt/secureusb
+exec python3 ports/shared/setup_cli.py "$@"
+EOF
+chmod 755 /usr/local/bin/secureusb-setup
+
+cat > /usr/local/bin/secureusb-daemon <<'EOF'
+#!/bin/bash
+cd /opt/secureusb
+exec python3 src/daemon/service.py "$@"
+EOF
+chmod 755 /usr/local/bin/secureusb-daemon
+
+cat > /usr/local/bin/secureusb-client <<'EOF'
+#!/bin/bash
+cd /opt/secureusb
+exec python3 src/gui/client.py "$@"
+EOF
+chmod 755 /usr/local/bin/secureusb-client
+
+cat > /usr/local/bin/secureusb-macos <<'EOF'
+#!/bin/bash
+# Main entry point for SecureUSB on macOS
+cd /opt/secureusb
+
+case "${1:-help}" in
+    setup)
+        exec python3 ports/shared/setup_cli.py
+        ;;
+    daemon)
+        exec python3 src/daemon/service.py
+        ;;
+    client)
+        exec python3 src/gui/client.py
+        ;;
+    start)
+        sudo launchctl load /Library/LaunchDaemons/org.secureusb.daemon.plist
+        echo "SecureUSB daemon started"
+        ;;
+    stop)
+        sudo launchctl unload /Library/LaunchDaemons/org.secureusb.daemon.plist
+        echo "SecureUSB daemon stopped"
+        ;;
+    restart)
+        sudo launchctl unload /Library/LaunchDaemons/org.secureusb.daemon.plist 2>/dev/null || true
+        sudo launchctl load /Library/LaunchDaemons/org.secureusb.daemon.plist
+        echo "SecureUSB daemon restarted"
+        ;;
+    status)
+        if launchctl list | grep -q "org.secureusb.daemon"; then
+            echo "SecureUSB daemon is running"
+        else
+            echo "SecureUSB daemon is not running"
+        fi
+        ;;
+    *)
+        cat <<HELP
+SecureUSB for macOS
+
+Usage: secureusb-macos <command>
+
+Commands:
+    setup       Run the initial setup wizard
+    daemon      Run the daemon manually (for debugging)
+    client      Run the GUI client manually
+    start       Start the SecureUSB daemon service
+    stop        Stop the SecureUSB daemon service
+    restart     Restart the SecureUSB daemon service
+    status      Check if the daemon is running
+    help        Show this help message
+
+Examples:
+    secureusb-macos setup       # Initial configuration
+    secureusb-macos start       # Start USB protection
+    secureusb-macos status      # Check daemon status
+    secureusb-macos stop        # Temporarily disable protection
+
+Configuration: $CONFIG_DIR
+Logs: $LOG_DIR
+HELP
+        ;;
+esac
+EOF
+chmod 755 /usr/local/bin/secureusb-macos
+
+# Load the LaunchDaemon (but don't start yet if not configured)
+echo "Loading LaunchDaemon..."
+launchctl load -w "$LAUNCHDAEMON_PLIST" 2>/dev/null || {
+    echo "Note: LaunchDaemon will start after initial setup"
+}
+
+# Check if SecureUSB is already configured
+if [ ! -f "$CONFIG_DIR/auth.enc" ]; then
+    echo ""
+    echo "================================================================"
+    echo " SecureUSB Installation Complete!"
+    echo "================================================================"
+    echo ""
+    echo "Next step: Run the setup wizard to configure TOTP authentication"
+    echo ""
+    echo "  sudo secureusb-macos setup"
+    echo ""
+    echo "Or run directly:"
+    echo "  sudo secureusb-setup"
+    echo ""
+    echo "After setup, the daemon will start automatically on boot."
+    echo "================================================================"
+else
+    echo ""
+    echo "================================================================"
+    echo " SecureUSB Updated Successfully!"
+    echo "================================================================"
+    echo ""
+    echo "The daemon has been restarted with the new version."
+    echo ""
+    echo "Useful commands:"
+    echo "  secureusb-macos status    - Check daemon status"
+    echo "  secureusb-macos restart   - Restart the daemon"
+    echo "  secureusb-macos stop      - Stop USB protection"
+    echo "================================================================"
+fi
+
+echo "✓ Post-installation complete"
+exit 0

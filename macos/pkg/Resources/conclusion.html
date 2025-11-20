@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #333;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #000;
+        }
+        h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #000;
+        }
+        ol, ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        .highlight {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #4caf50;
+        }
+        code {
+            font-family: "SF Mono", Monaco, monospace;
+            font-size: 12px;
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .command {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: "SF Mono", Monaco, monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SecureUSB Installation Complete!</h1>
+
+    <div class="highlight">
+        <strong>⚠️ Important:</strong> SecureUSB requires initial configuration before it can protect your USB ports.
+    </div>
+
+    <h2>Required: Initial Setup</h2>
+    <ol>
+        <li>Open Terminal (Applications → Utilities → Terminal)</li>
+        <li>Run the setup wizard:
+            <div class="command">sudo secureusb-macos setup</div>
+        </li>
+        <li>Install Google Authenticator on your phone (or any TOTP app)</li>
+        <li>Scan the QR code displayed in Terminal</li>
+        <li>Save the recovery codes shown</li>
+        <li>Enter a TOTP code to verify the setup</li>
+    </ol>
+
+    <h2>Managing SecureUSB</h2>
+    <p>Use these commands in Terminal:</p>
+    <ul>
+        <li><code>secureusb-macos status</code> - Check if daemon is running</li>
+        <li><code>secureusb-macos start</code> - Start USB protection</li>
+        <li><code>secureusb-macos stop</code> - Stop USB protection</li>
+        <li><code>secureusb-macos restart</code> - Restart the daemon</li>
+        <li><code>secureusb-macos setup</code> - Run setup wizard again</li>
+    </ul>
+
+    <h2>How It Works</h2>
+    <ol>
+        <li>When you plug in a USB device, a dialog will appear</li>
+        <li>Open Google Authenticator on your phone</li>
+        <li>Enter the 6-digit code shown for SecureUSB</li>
+        <li>Choose to Connect, allow Power Only, or Deny the device</li>
+    </ol>
+
+    <h2>Configuration Files</h2>
+    <ul>
+        <li><strong>Config:</strong> <code>/Library/Application Support/SecureUSB/</code></li>
+        <li><strong>Logs:</strong> <code>/Library/Logs/SecureUSB/</code></li>
+        <li><strong>Installation:</strong> <code>/opt/secureusb/</code></li>
+    </ul>
+
+    <h2>Need Help?</h2>
+    <ul>
+        <li>Documentation: <code>/opt/secureusb/README.md</code></li>
+        <li>macOS-specific: <code>/opt/secureusb/macos/README.md</code></li>
+        <li>Support: hello@othertales.co</li>
+    </ul>
+
+    <div class="highlight">
+        <strong>Get Started:</strong> Open Terminal and run <code>sudo secureusb-macos setup</code> now!
+    </div>
+</body>
+</html>

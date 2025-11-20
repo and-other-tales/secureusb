@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>SecureUSB</title>
+    <organization>org.secureusb</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="true" rootVolumeOnly="true" />
+
+    <!-- Define documents displayed at various steps -->
+    <welcome file="welcome.html" mime-type="text/html" />
+    <conclusion file="conclusion.html" mime-type="text/html" />
+    <license file="LICENSE.txt" mime-type="text/plain" />
+
+    <!-- Define choices: this is a single-component install -->
+    <choices-outline>
+        <line choice="default">
+            <line choice="org.secureusb"/>
+        </line>
+    </choices-outline>
+
+    <choice id="default"/>
+    <choice id="org.secureusb" visible="false">
+        <pkg-ref id="org.secureusb"/>
+    </choice>
+
+    <pkg-ref id="org.secureusb" version="VERSION_PLACEHOLDER" onConclusion="none">secureusb-component.pkg</pkg-ref>
+
+    <!-- Specify background and other appearance settings -->
+    <background file="background.png" mime-type="image/png" alignment="topleft" scaling="none"/>
+
+    <!-- Volume checks -->
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="12.0"/>
+        </allowed-os-versions>
+    </volume-check>
+</installer-gui-script>
