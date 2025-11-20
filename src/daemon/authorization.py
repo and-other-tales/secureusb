@@ -265,7 +265,10 @@ class USBAuthorization:
         try:
             with open(attr_file, 'r') as f:
                 return f.read().strip()
-        except:
+        except Exception as e:
+            # Log error for debugging but don't expose to user
+            import sys
+            print(f"[DEBUG] Error reading device attribute {attribute}: {e}", file=sys.stderr)
             return None
 
     @staticmethod
