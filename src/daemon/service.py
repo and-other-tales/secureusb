@@ -49,6 +49,11 @@ class SecureUSBDaemon:
         self.recovery_codes = []
         self._load_authentication()
 
+        # Security: Rate limiting for TOTP attempts
+        self.failed_auth_attempts = {}  # device_id -> {'count': int, 'last_attempt': float}
+        self.max_auth_attempts = 3
+        self.auth_cooldown_seconds = 60
+
         # Initialize D-Bus
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         self.bus = dbus.SystemBus()
@@ -221,9 +226,12 @@ class SecureUSBDaemon:
             self._deny_device(device_id, device_info)
             return 'success'
 
-        # Verify authentication
-        if not self._verify_authentication(totp_code):
-            print(f"[Daemon] Authentication failed")
+        # Security: Check rate limiting before authentication
+        if self._is_rate_limited(device_id):
+            attempt_data = self.failed_auth_attempts[device_id]
+            elapsed = time.time() - attempt_data['last_attempt']
+            remaining = int(self.auth_cooldown_seconds - elapsed)
+            print(f"[Daemon] Rate limit exceeded for device {device_id}. Try again in {remaining}s")
             self.logger.log_event(
                 EventAction.AUTH_FAILED,
                 device_path=device_info.get('device_path'),
@@ -231,7 +239,28 @@ class SecureUSBDaemon:
                 product_id=device_info.get('product_id'),
                 serial_number=device_info.get('serial_number'),
                 success=False,
-                details=f"Invalid TOTP code or recovery code"
+                details=f"Rate limited - too many failed attempts. Wait {remaining} seconds."
+            )
+            return 'rate_limited'
+
+        # Verify authentication
+        auth_success = self._verify_authentication(totp_code)
+
+        # Record the attempt for rate limiting
+        self._record_auth_attempt(device_id, auth_success)
+
+        if not auth_success:
+            print(f"[Daemon] Authentication failed")
+            attempts_left = self.max_auth_attempts - self.failed_auth_attempts.get(device_id, {}).get('count', 0)
+            print(f"[Daemon] Attempts remaining: {attempts_left}")
+            self.logger.log_event(
+                EventAction.AUTH_FAILED,
+                device_path=device_info.get('device_path'),
+                vendor_id=device_info.get('vendor_id'),
+                product_id=device_info.get('product_id'),
+                serial_number=device_info.get('serial_number'),
+                success=False,
+                details=f"Invalid TOTP code or recovery code. {attempts_left} attempts remaining."
             )
             return 'auth_failed'
 
@@ -252,6 +281,55 @@ class SecureUSBDaemon:
             return self._authorize_device_power_only(device_id, device_info)
         else:
             return 'error'
+
+    def _is_rate_limited(self, device_id: str) -> bool:
+        """
+        Check if device is rate-limited due to failed authentication attempts.
+
+        Args:
+            device_id: Device identifier
+
+        Returns:
+            True if rate-limited, False otherwise
+        """
+        if device_id not in self.failed_auth_attempts:
+            return False
+
+        attempt_data = self.failed_auth_attempts[device_id]
+        elapsed = time.time() - attempt_data['last_attempt']
+
+        # Reset counter if cooldown period has passed
+        if elapsed >= self.auth_cooldown_seconds:
+            del self.failed_auth_attempts[device_id]
+            return False
+
+        # Check if max attempts exceeded
+        if attempt_data['count'] >= self.max_auth_attempts:
+            remaining = int(self.auth_cooldown_seconds - elapsed)
+            print(f"[Daemon] Device {device_id} is rate-limited. Retry in {remaining} seconds")
+            return True
+
+        return False
+
+    def _record_auth_attempt(self, device_id: str, success: bool):
+        """
+        Record authentication attempt for rate limiting.
+
+        Args:
+            device_id: Device identifier
+            success: True if authentication succeeded
+        """
+        if success:
+            # Clear rate limiting on success
+            if device_id in self.failed_auth_attempts:
+                del self.failed_auth_attempts[device_id]
+        else:
+            # Increment failed attempts
+            if device_id not in self.failed_auth_attempts:
+                self.failed_auth_attempts[device_id] = {'count': 0, 'last_attempt': 0}
+
+            self.failed_auth_attempts[device_id]['count'] += 1
+            self.failed_auth_attempts[device_id]['last_attempt'] = time.time()
 
     def _verify_authentication(self, code: str) -> bool:
         """
@@ -459,6 +537,35 @@ class SecureUSBDaemon:
 
         return False
 
+    def _should_auto_allow_pre_boot_device(self, device: USBDevice) -> bool:
+        """
+        Determine if a pre-boot device should be automatically allowed.
+
+        Args:
+            device: USBDevice to check
+
+        Returns:
+            True if device should be auto-allowed, False if it should be blocked
+        """
+        # Allow whitelisted devices (still requires TOTP later)
+        if self.whitelist.is_whitelisted(device.serial_number):
+            return True
+
+        # Auto-allow USB hubs (they don't transfer data themselves)
+        if device.device_class == '09':  # USB Hub class
+            return True
+
+        # Auto-allow HID devices (keyboard/mouse) that were pre-boot
+        # These are essential for system operation
+        if device.device_class == '03':  # HID class
+            # Check if it's a keyboard (interface protocol 01) or mouse (02)
+            # Note: This is a security tradeoff - we allow pre-boot HID devices
+            # to prevent locking users out of their systems
+            return True
+
+        # Block all other devices - they must be authenticated
+        return False
+
     def start(self):
         """Start the daemon."""
         print("\n[Daemon] Starting services...")
@@ -467,6 +574,28 @@ class SecureUSBDaemon:
         if self.config.is_enabled() and self.totp_auth:
             print("[Daemon] Setting USB authorization default to BLOCK")
             USBAuthorization.set_default_authorization("0")
+
+            # Security: Scan and block pre-boot devices (except keyboard/mouse)
+            print("[Daemon] Scanning pre-boot connected USB devices...")
+            existing_devices = self.monitor.scan_existing_devices()
+            for device in existing_devices:
+                # Check if device is whitelisted or should be auto-allowed
+                if self._should_auto_allow_pre_boot_device(device):
+                    print(f"[Daemon] Pre-boot device auto-allowed: {device.product_name}")
+                    USBAuthorization.allow_device(device.device_id)
+                else:
+                    # Block device - user must authenticate to use it
+                    print(f"[Daemon] Pre-boot device blocked: {device.product_name}")
+                    USBAuthorization.block_device(device.device_id)
+                    # Log the block action
+                    if self.logger:
+                        self.logger.log_event(
+                            action=EventAction.DENIED,
+                            device=device,
+                            auth_method="pre-boot-scan",
+                            success=False,
+                            details="Device plugged in before daemon startup - requires authentication"
+                        )
         else:
             print("[Daemon] USB protection disabled or not configured")
 

@@ -7,6 +7,8 @@ Note: Even whitelisted devices still require TOTP authentication.
 """
 
 import json
+import os
+import stat
 import time
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -61,6 +63,8 @@ class DeviceWhitelist:
         try:
             with open(self.whitelist_file, 'w') as f:
                 json.dump(self.devices, f, indent=2)
+            # Security: Set restrictive permissions (0600 - owner read/write only)
+            os.chmod(self.whitelist_file, stat.S_IRUSR | stat.S_IWUSR)
             return True
         except Exception as e:
             print(f"Error saving whitelist: {e}")

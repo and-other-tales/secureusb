@@ -9,6 +9,7 @@ and user-space GUI applications.
 import dbus
 import dbus.service
 import dbus.mainloop.glib
+import subprocess
 from gi.repository import GLib
 from typing import Dict, List, Optional, Callable
 
@@ -41,6 +42,36 @@ class SecureUSBService(dbus.service.Object):
         self.pending_requests = {}
 
         print(f"[D-Bus] Service registered: {DBUS_SERVICE_NAME}")
+
+    def _check_polkit_authorization(self, sender: str, action_id: str) -> bool:
+        """
+        Verify Polkit authorization for sensitive operations.
+
+        Args:
+            sender: D-Bus sender (bus name)
+            action_id: Polkit action ID
+
+        Returns:
+            True if authorized, False otherwise
+        """
+        try:
+            # Get the process ID of the sender
+            bus = dbus.SystemBus()
+            dbus_obj = bus.get_object('org.freedesktop.DBus', '/org/freedesktop/DBus')
+            dbus_iface = dbus.Interface(dbus_obj, 'org.freedesktop.DBus')
+            pid = dbus_iface.GetConnectionUnixProcessID(sender)
+
+            # Use pkcheck to verify authorization
+            result = subprocess.run(
+                ['pkcheck', '--action-id', action_id, '--process', str(pid)],
+                capture_output=True,
+                text=True
+            )
+
+            return result.returncode == 0
+        except Exception as e:
+            print(f"[D-Bus] Polkit check failed: {e}")
+            return False
 
     @dbus.service.method(DBUS_INTERFACE_NAME, in_signature='', out_signature='b')
     def Ping(self):
@@ -77,17 +108,23 @@ class SecureUSBService(dbus.service.Object):
         except:
             return True
 
-    @dbus.service.method(DBUS_INTERFACE_NAME, in_signature='b', out_signature='b')
-    def SetEnabled(self, enabled):
+    @dbus.service.method(DBUS_INTERFACE_NAME, in_signature='b', out_signature='b', sender_keyword='sender')
+    def SetEnabled(self, enabled, sender=None):
         """
         Enable or disable USB protection.
 
         Args:
             enabled: True to enable, False to disable
+            sender: D-Bus sender (automatically provided)
 
         Returns:
             True if successful, False otherwise
         """
+        # Security: Verify Polkit authorization before allowing enable/disable
+        if not self._check_polkit_authorization(sender, 'org.secureusb.enable-disable'):
+            print(f"[D-Bus] SetEnabled denied for sender {sender}: insufficient privileges")
+            return False
+
         if self.config_callback:
             return self.config_callback('set_enabled', enabled)
         return False

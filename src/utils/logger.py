@@ -7,6 +7,8 @@ Records all USB device connection attempts and authorization decisions.
 """
 
 import sqlite3
+import os
+import stat
 import time
 from datetime import datetime
 from pathlib import Path
@@ -86,6 +88,9 @@ class USBLogger:
 
         conn.commit()
         conn.close()
+
+        # Security: Set restrictive permissions (0600 - owner read/write only)
+        os.chmod(self.db_path, stat.S_IRUSR | stat.S_IWUSR)
 
     def _auto_cleanup(self):
         """Automatically cleanup old events based on default retention policy."""

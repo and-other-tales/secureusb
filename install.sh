@@ -254,8 +254,11 @@ if [ -d "$LEGACY_CONFIG_DIR" ] && [ -z "$(ls -A "$CONFIG_DIR" 2>/dev/null)" ]; t
     cp -a "$LEGACY_CONFIG_DIR/." "$CONFIG_DIR/"
 fi
 
-chown -R "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR"
-chmod 700 "$CONFIG_DIR"
+# Security: Config directory must be owned by root to prevent tampering
+# The daemon runs as root and needs write access
+# Regular users should NOT be able to modify these files
+chown -R root:root "$CONFIG_DIR"
+chmod 750 "$CONFIG_DIR"  # root rwx, group rx, others none
 
 mkdir -p /etc/secureusb
 echo "$CONFIG_DIR" > /etc/secureusb/config_dir

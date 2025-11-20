@@ -7,6 +7,8 @@ Manages application configuration and settings.
 
 import json
 import copy
+import os
+import stat
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -116,6 +118,8 @@ class Config:
         try:
             with open(self.config_file, 'w') as f:
                 json.dump(self.config, f, indent=2)
+            # Security: Set restrictive permissions (0600 - owner read/write only)
+            os.chmod(self.config_file, stat.S_IRUSR | stat.S_IWUSR)
             return True
         except Exception as e:
             print(f"Error saving config: {e}")
