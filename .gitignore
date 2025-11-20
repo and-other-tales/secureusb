@@ -49,3 +49,10 @@ Thumbs.db
 *.bak
 *.backup
 .venv/
+
+# Windows MSI build artifacts
+windows/msi/build/
+windows/msi/dist/
+*.msi
+*.wixobj
+*.wixpdb
