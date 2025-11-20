@@ -385,7 +385,8 @@ class DeviceInfo:
                 return None
             device_id = device_path.split('/')[-1]
             return device_id if device_id else None
-        except:
+        except Exception as e:
+            print(f"Error parsing device path '{device_path}': {e}")
             return None
 
     @staticmethod
@@ -404,8 +405,8 @@ class DeviceInfo:
             attr_path = Path(device_path) / attr
             if attr_path.exists():
                 return attr_path.read_text().strip()
-        except:
-            pass
+        except Exception as e:
+            print(f"Error reading sysfs attribute '{attr}' from '{device_path}': {e}")
         return None
 
 

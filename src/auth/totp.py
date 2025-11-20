@@ -139,6 +139,7 @@ class RecoveryCodeManager:
 
         Raises:
             TypeError: If count is not an integer
+            ValueError: If count is out of valid range
         """
         # Validate type
         if not isinstance(count, int):
@@ -186,7 +187,11 @@ class RecoveryCodeManager:
         Returns:
             True if code matches hash, False otherwise
         """
-        return RecoveryCodeManager.hash_code(code) == hashed_code
+        # Use constant-time comparison to prevent timing attacks
+        return secrets.compare_digest(
+            RecoveryCodeManager.hash_code(code),
+            hashed_code
+        )
 
     @staticmethod
     def format_code(code: str) -> str:
