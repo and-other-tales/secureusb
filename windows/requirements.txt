@@ -1,0 +1,19 @@
+# SecureUSB Windows Dependencies
+#
+# Install with: pip install -r windows/requirements.txt
+
+# Core dependencies (same as Linux)
+pyudev>=0.24.0           # USB device monitoring (limited on Windows)
+pyotp>=2.9.0             # TOTP authentication
+qrcode[pil]>=7.4.0       # QR code generation
+Pillow>=11.0.0           # Image processing
+cryptography>=41.0.0     # Secure storage (AES-256)
+
+# Windows-specific dependencies
+pywin32>=306             # Windows API access (for device management)
+wmi>=1.5.1               # Windows Management Instrumentation
+PySide6>=6.6.0           # Qt6 for cross-platform GUI (alternative to GTK4)
+PySide6-Addons>=6.6.0    # Additional Qt6 widgets
+
+# Optional: System tray support
+pystray>=0.19.0          # System tray icon
