@@ -226,5 +226,5 @@ Write-Host "MSI Installer: $MsiOutput"
 Write-Host "Size: $((Get-Item $MsiOutput).Length / 1MB) MB" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "You can now install SecureUSB by running:"
-Write-Host "  msiexec /i `"$MsiOutput`"" -ForegroundColor Yellow
+Write-Host "  msiexec /i ""$MsiOutput""" -ForegroundColor Yellow
 Write-Host ""
