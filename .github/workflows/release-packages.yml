@@ -44,8 +44,8 @@ jobs:
           export PYTHONPATH="${GITHUB_WORKSPACE}:$PYTHONPATH"
           pytest tests/ -v --tb=short
 
-  build-and-upload:
-    name: Build installers
+  build-linux:
+    name: Build Linux packages
     runs-on: ubuntu-latest
     needs: test
     env:
@@ -86,7 +86,7 @@ jobs:
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: secureusb-release-${{ steps.version.outputs.value }}
+          name: linux-packages
           path: |
             packaging/debian/dist/*.deb
             packaging/rpm/rpmbuild/RPMS/**/*.rpm
@@ -98,3 +98,89 @@ jobs:
           files: |
             packaging/debian/dist/*.deb
             packaging/rpm/rpmbuild/RPMS/**/*.rpm
+
+  build-macos:
+    name: Build macOS package
+    runs-on: macos-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RAW="${{ github.event.release.tag_name }}"
+          else
+            RAW="${{ inputs.version }}"
+          fi
+
+          if [ -z "$RAW" ]; then
+            echo "Version not provided" >&2
+            exit 1
+          fi
+
+          CLEAN="${RAW#v}"
+          echo "value=$CLEAN" >> "$GITHUB_OUTPUT"
+
+      - name: Build macOS PKG
+        run: ./macos/pkg/build_pkg.sh "${{ steps.version.outputs.value }}"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-package
+          path: macos/pkg/dist/*.pkg
+
+      - name: Attach assets to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: macos/pkg/dist/*.pkg
+
+  build-windows:
+    name: Build Windows package
+    runs-on: windows-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RAW="${{ github.event.release.tag_name }}"
+          else
+            RAW="${{ inputs.version }}"
+          fi
+
+          if [ -z "$RAW" ]; then
+            echo "Version not provided" >&2
+            exit 1
+          fi
+
+          CLEAN="${RAW#v}"
+          echo "value=$CLEAN" >> "$GITHUB_OUTPUT"
+
+      - name: Build Windows MSI
+        shell: pwsh
+        run: |
+          cd windows/msi
+          .\build_msi.ps1 -Version "${{ steps.version.outputs.value }}"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: windows/msi/dist/*.msi
+
+      - name: Attach assets to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: windows/msi/dist/*.msi
