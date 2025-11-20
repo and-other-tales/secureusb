@@ -1,5 +1,5 @@
 Name:           secureusb
-Version:        0.1
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Secure USB device authorization service
 License:        MIT
@@ -35,9 +35,6 @@ install -m 0644 data/polkit/org.secureusb.policy %{buildroot}/usr/share/polkit-1
 
 install -d %{buildroot}/etc/dbus-1/system.d
 install -m 0644 data/dbus/org.secureusb.Daemon.conf %{buildroot}/etc/dbus-1/system.d/org.secureusb.Daemon.conf
-
-install -d %{buildroot}/usr/share/icons/hicolor/scalable/apps
-install -m 0644 data/icons/hicolor/scalable/apps/*.svg %{buildroot}/usr/share/icons/hicolor/scalable/apps/
 
 install -d %{buildroot}/etc/xdg/autostart
 install -m 0644 data/desktop/secureusb-client.desktop %{buildroot}/etc/xdg/autostart/secureusb-client.desktop
@@ -77,10 +74,6 @@ chmod 0755 %{buildroot}/usr/local/bin/secureusb-indicator
 if [ $1 -eq 1 ]; then
     /bin/systemctl enable --now secureusb.service >/dev/null 2>&1 || :
 fi
-# Update icon cache
-if command -v gtk-update-icon-cache &> /dev/null; then
-    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || :
-fi
 
 %preun
 if [ $1 -eq 0 ]; then
@@ -90,13 +83,12 @@ fi
 
 %files
 %license LICENSE
-%doc README.md QUICKSTART.md docs
+%doc README.md QUICKSTART.md
 /opt/secureusb
 /etc/systemd/system/secureusb.service
 /etc/udev/rules.d/99-secureusb.rules
 /usr/share/polkit-1/actions/org.secureusb.policy
 /etc/dbus-1/system.d/org.secureusb.Daemon.conf
-/usr/share/icons/hicolor/scalable/apps/*.svg
 /etc/xdg/autostart/secureusb-client.desktop
 /etc/xdg/autostart/secureusb-indicator.desktop
 /usr/local/bin/secureusb-daemon
@@ -105,5 +97,5 @@ fi
 /usr/local/bin/secureusb-indicator
 
 %changelog
-* Sat Feb 15 2025 SecureUSB Automation <maintainers@secureusb.local> - 0.1-1
+* Sat Feb 15 2025 SecureUSB Automation <maintainers@secureusb.local> - 1.0.0-1
 - Initial RPM packaging

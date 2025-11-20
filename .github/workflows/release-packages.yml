@@ -9,6 +9,9 @@ on:
         description: "Version (e.g. 1.0.0). Leave blank when triggered by a tag."
         required: false
 
+permissions:
+  contents: write
+
 jobs:
   test:
     name: Run tests before release
