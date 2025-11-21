@@ -149,9 +149,11 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
             packaging/debian/dist/*.deb
             packaging/rpm/rpmbuild/RPMS/**/*.rpm
+          fail_on_unmatched_files: true
 
   build-macos:
     name: Build macOS package
@@ -227,7 +229,9 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: macos/pkg/dist/*.pkg
+          fail_on_unmatched_files: true
 
   build-windows:
     name: Build Windows package
@@ -299,4 +303,6 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: windows/msi/dist/*.msi
+          fail_on_unmatched_files: true

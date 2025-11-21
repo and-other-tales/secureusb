@@ -83,7 +83,7 @@ fi
 
 %files
 %license LICENSE
-%doc README.md QUICKSTART.md docs
+%doc README.md QUICKSTART.md
 /opt/secureusb
 /etc/systemd/system/secureusb.service
 /etc/udev/rules.d/99-secureusb.rules
