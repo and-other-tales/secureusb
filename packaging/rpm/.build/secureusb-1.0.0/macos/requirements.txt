@@ -1,0 +1,19 @@
+# SecureUSB macOS Dependencies
+#
+# Install with: pip3 install -r macos/requirements.txt
+
+# Core dependencies (same as Linux)
+pyotp>=2.9.0             # TOTP authentication
+qrcode[pil]>=7.4.0       # QR code generation
+Pillow>=11.0.0           # Image processing
+cryptography>=41.0.0     # Secure storage (AES-256)
+
+# macOS-specific dependencies
+pyobjc-core>=10.0        # Python-Objective-C bridge
+pyobjc-framework-Cocoa>=10.0  # Cocoa framework bindings
+pyobjc-framework-IOKit>=10.0  # IOKit for USB device management
+PySide6>=6.6.0           # Qt6 for cross-platform GUI
+PySide6-Addons>=6.6.0    # Additional Qt6 widgets
+
+# Optional: System tray support
+pystray>=0.19.0          # System tray icon

@@ -1,0 +1,10 @@
+Package: secureusb
+Version: @VERSION@
+Section: admin
+Priority: optional
+Architecture: all
+Essential: no
+Maintainer: SecureUSB Team <maintainers@secureusb.local>
+Description: USB authorization guard with TOTP authentication.
+ Depends: python3, python3-gi, python3-dbus, gir1.2-gtk-4.0, gir1.2-gtk-3.0, gir1.2-adw-1, gir1.2-ayatanaappindicator3-0.1, libgirepository1.0-dev, udev, policykit-1, dbus, systemd
+Homepage: https://github.com/secureusb/secureusb

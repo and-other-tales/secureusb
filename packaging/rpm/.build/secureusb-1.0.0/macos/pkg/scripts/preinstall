@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# SecureUSB macOS Preinstall Script
+# Runs before package installation to clean up previous installations
+#
+
+set -e
+
+echo "==> SecureUSB Pre-installation..."
+
+# Stop and unload the daemon if it's running
+if launchctl list | grep -q "org.secureusb.daemon"; then
+    echo "Stopping existing SecureUSB daemon..."
+    launchctl unload /Library/LaunchDaemons/org.secureusb.daemon.plist 2>/dev/null || true
+fi
+
+# Remove old LaunchDaemon plist if it exists
+if [ -f /Library/LaunchDaemons/org.secureusb.daemon.plist ]; then
+    echo "Removing old LaunchDaemon configuration..."
+    rm -f /Library/LaunchDaemons/org.secureusb.daemon.plist
+fi
+
+# Remove old wrapper scripts if they exist
+echo "Cleaning up old wrapper scripts..."
+rm -f /usr/local/bin/secureusb-setup
+rm -f /usr/local/bin/secureusb-macos
+rm -f /usr/local/bin/secureusb-daemon
+rm -f /usr/local/bin/secureusb-client
+
+echo "✓ Pre-installation cleanup complete"
+exit 0

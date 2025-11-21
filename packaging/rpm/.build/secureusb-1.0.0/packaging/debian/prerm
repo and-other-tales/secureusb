@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -e
+
+systemctl stop secureusb.service 2>/dev/null || true
+systemctl disable secureusb.service 2>/dev/null || true
