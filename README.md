@@ -46,6 +46,9 @@ When you plug in a USB device, you'll see this dialog:
 ### Setup Wizard
 First-time configuration with QR code for Google Authenticator.
 
+![SecureUSB Setup](images/secureusb.png)
+![QR Code](images/qrcode.png)
+
 ## Requirements
 
 - **OS**: Modern Linux distribution with systemd (tested on GNOME-based Debian derivatives)
